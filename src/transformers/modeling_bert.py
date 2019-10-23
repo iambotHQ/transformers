@@ -529,6 +529,20 @@ class BertPreTrainedModel(PreTrainedModel):
         if isinstance(module, nn.Linear) and module.bias is not None:
             module.bias.data.zero_()
 
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+        model = super().from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
+        config = kwargs.get("config", None)
+        if config:
+            pooler_name = getattr(config, "pooler", None)
+            pooler_class = BertPooler
+            if pooler_name:
+                pooler_name = pooler_name.lower()
+                if pooler_name.startswith("concat"):
+                    pooler_class = ConcatAvgMaxPooler
+            setattr(getattr(model, cls.base_model_prefix), "pooler", pooler_class(config))
+        return model
+
 
 BERT_START_DOCSTRING = r"""
     This model is a PyTorch `torch.nn.Module <https://pytorch.org/docs/stable/nn.html#torch.nn.Module>`_ sub-class.
@@ -615,7 +629,6 @@ class BertModel(BertPreTrainedModel):
         self.embeddings = BertEmbeddings(config)
         self.encoder = BertEncoder(config)
         self.pooler = BertPooler(config)
-
         self.init_weights()
 
     def get_input_embeddings(self):
