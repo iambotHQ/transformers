@@ -37,14 +37,17 @@ except:
 from tqdm import tqdm, trange
 
 from transformers import (WEIGHTS_NAME, BertConfig,
-                                  BertForQuestionAnswering, BertTokenizer,
-                                  XLMConfig, XLMForQuestionAnswering,
-                                  XLMTokenizer, XLNetConfig,
-                                  XLNetForQuestionAnswering,
-                                  XLNetTokenizer,
-                                  DistilBertConfig, DistilBertForQuestionAnswering, DistilBertTokenizer)
+                          BertForQuestionAnswering, BertTokenizer,
+                          XLMConfig, XLMForQuestionAnswering,
+                          XLMTokenizer, XLNetConfig,
+                          XLNetForQuestionAnswering,
+                          XLNetTokenizer,
+                          DistilBertConfig, DistilBertForQuestionAnswering, DistilBertTokenizer,
+                          RobertaConfig, RobertaTokenizer)
 
 from transformers import AdamW, WarmupLinearSchedule
+
+from transformers.customs.modeling_roberta import RobertaForQuestionAnswering
 
 from utils_squad import (read_squad_examples, convert_examples_to_features,
                          RawResult, write_predictions,
@@ -64,7 +67,8 @@ MODEL_CLASSES = {
     'bert': (BertConfig, BertForQuestionAnswering, BertTokenizer),
     'xlnet': (XLNetConfig, XLNetForQuestionAnswering, XLNetTokenizer),
     'xlm': (XLMConfig, XLMForQuestionAnswering, XLMTokenizer),
-    'distilbert': (DistilBertConfig, DistilBertForQuestionAnswering, DistilBertTokenizer)
+    'distilbert': (DistilBertConfig, DistilBertForQuestionAnswering, DistilBertTokenizer),
+    'roberta': (RobertaConfig, RobertaForQuestionAnswering, RobertaTokenizer)
 }
 
 def set_seed(args):
