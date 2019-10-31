@@ -658,7 +658,7 @@ class PreTrainedTokenizer(object):
         """
         raise NotImplementedError
 
-    def convert_tokens_to_ids(self, tokens):
+    def convert_tokens_to_ids(self, tokens, long_sequence_warning: bool = True):
         """ Converts a single token, or a sequence of tokens, (str/unicode) in a single integer id
             (resp. a sequence of ids), using the vocabulary.
         """
@@ -671,7 +671,7 @@ class PreTrainedTokenizer(object):
         ids = []
         for token in tokens:
             ids.append(self._convert_token_to_id_with_added_voc(token))
-        if len(ids) > self.max_len:
+        if long_sequence_warning and len(ids) > self.max_len:
             logger.warning("Token indices sequence length is longer than the specified maximum sequence length "
                            "for this model ({} > {}). Running this sequence through the model will result in "
                            "indexing errors".format(len(ids), self.max_len))
@@ -696,6 +696,7 @@ class PreTrainedTokenizer(object):
                 stride=0,
                 truncation_strategy='longest_first',
                 return_tensors=None,
+                long_sequence_warning: bool = True,
                 **kwargs):
         """
         Converts a string in a sequence of ids (integer), using the tokenizer and vocabulary.
@@ -723,6 +724,8 @@ class PreTrainedTokenizer(object):
                 - 'do_not_truncate': Does not truncate (raise an error if the input sequence is longer than max_length)
             return_tensors: (optional) can be set to 'tf' or 'pt' to return respectively TensorFlow tf.constant
                 or PyTorch torch.Tensor instead of a list of python integers.
+            long_sequence_warning: boolean flag indicating, if warning should be logged in case resulting tokens
+                sequence is too long for model associated with this tokenizer to handle
             **kwargs: passed to the `self.tokenize()` method
         """
         encoded_inputs = self.encode_plus(text,
@@ -732,6 +735,7 @@ class PreTrainedTokenizer(object):
                                           stride=stride,
                                           truncation_strategy=truncation_strategy,
                                           return_tensors=return_tensors,
+                                          long_sequence_warning=long_sequence_warning,
                                           **kwargs)
 
         return encoded_inputs["input_ids"]
@@ -744,6 +748,7 @@ class PreTrainedTokenizer(object):
                     stride=0,
                     truncation_strategy='longest_first',
                     return_tensors=None,
+                    long_sequence_warning: bool = True,
                     **kwargs):
         """
         Returns a dictionary containing the encoded sequence or sequence pair and additional informations:
@@ -770,14 +775,16 @@ class PreTrainedTokenizer(object):
                 - 'do_not_truncate': Does not truncate (raise an error if the input sequence is longer than max_length)
             return_tensors: (optional) can be set to 'tf' or 'pt' to return respectively TensorFlow tf.constant
                 or PyTorch torch.Tensor instead of a list of python integers.
+            long_sequence_warning: boolean flag indicating, if warning should be logged in case resulting tokens
+                sequence is too long for model associated with this tokenizer to handle
             **kwargs: passed to the `self.tokenize()` method
         """
 
         def get_input_ids(text):
             if isinstance(text, six.string_types):
-                return self.convert_tokens_to_ids(self.tokenize(text, **kwargs))
+                return self.convert_tokens_to_ids(self.tokenize(text, **kwargs), long_sequence_warning)
             elif isinstance(text, (list, tuple)) and len(text) > 0 and isinstance(text[0], six.string_types):
-                return self.convert_tokens_to_ids(text)
+                return self.convert_tokens_to_ids(text, long_sequence_warning)
             elif isinstance(text, (list, tuple)) and len(text) > 0 and isinstance(text[0], int):
                 return text
             else:
