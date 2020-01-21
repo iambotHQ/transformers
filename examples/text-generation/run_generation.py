@@ -17,10 +17,10 @@
 """ Conditional text generation with the auto-regressive models of the library (GPT/GPT-2/CTRL/Transformer-XL/XLNet)
 """
 
-
 import argparse
 import logging
 
+import lm
 import numpy as np
 import torch
 

@@ -56,9 +56,9 @@ def compute_normalization_binary_search(activations, t, num_iters):
     mu, _ = torch.max(activations, -1, keepdim=True)
     normalized_activations = activations - mu
 
-    effective_dim = torch.sum(
-        (normalized_activations > -1.0 / (1.0 - t)).to(torch.int32), dim=-1, keepdim=True
-    ).to(activations.dtype)
+    effective_dim = torch.sum((normalized_activations > -1.0 / (1.0 - t)).to(torch.int32), dim=-1, keepdim=True).to(
+        activations.dtype
+    )
 
     shape_partition = activations.shape[:-1] + (1,)
     lower = torch.zeros(shape_partition, dtype=activations.dtype, device=activations.device)
@@ -66,9 +66,7 @@ def compute_normalization_binary_search(activations, t, num_iters):
 
     for _ in range(num_iters):
         logt_partition = (upper + lower) / 2.0
-        sum_probs = torch.sum(
-            exp_t(normalized_activations - logt_partition, t), dim=-1, keepdim=True
-        )
+        sum_probs = torch.sum(exp_t(normalized_activations - logt_partition, t), dim=-1, keepdim=True)
         update = (sum_probs < 1.0).to(activations.dtype)
         lower = torch.reshape(lower * update + (1.0 - update) * logt_partition, shape_partition)
         upper = torch.reshape(upper * (1.0 - update) + update * logt_partition, shape_partition)
@@ -150,9 +148,7 @@ def tempered_softmax(activations, t, num_iters=5):
     return exp_t(activations - normalization_constants, t)
 
 
-def bi_tempered_binary_logistic_loss(
-    activations, labels, t1, t2, label_smoothing=0.0, num_iters=5, reduction="mean"
-):
+def bi_tempered_binary_logistic_loss(activations, labels, t1, t2, label_smoothing=0.0, num_iters=5, reduction="mean"):
 
     """Bi-Tempered binary logistic loss.
 
@@ -168,9 +164,7 @@ def bi_tempered_binary_logistic_loss(
       A loss tensor.
     """
     internal_activations = torch.stack([activations, torch.zeros_like(activations)], dim=-1)
-    internal_labels = torch.stack(
-        [labels.to(activations.dtype), 1.0 - labels.to(activations.dtype)], dim=-1
-    )
+    internal_labels = torch.stack([labels.to(activations.dtype), 1.0 - labels.to(activations.dtype)], dim=-1)
     return bi_tempered_logistic_loss(
         internal_activations,
         internal_labels,
@@ -212,9 +206,9 @@ def bi_tempered_logistic_loss(
 
     if label_smoothing > 0:
         num_classes = labels_onehot.shape[-1]
-        labels_onehot = (
-            1 - label_smoothing * num_classes / (num_classes - 1)
-        ) * labels_onehot + label_smoothing / (num_classes - 1)
+        labels_onehot = (1 - label_smoothing * num_classes / (num_classes - 1)) * labels_onehot + label_smoothing / (
+            num_classes - 1
+        )
 
     probabilities = tempered_softmax(activations, t2, num_iters)
 
@@ -229,7 +223,6 @@ def bi_tempered_logistic_loss(
         + probabilities.pow(2.0 - t1) / (2.0 - t1)
     )
     loss_values = loss_values.sum(dim=-1)  # sum over classes
-
 
     if reduction == "none":
         return loss_values

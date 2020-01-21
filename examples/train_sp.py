@@ -1,8 +1,8 @@
 import multiprocessing as mp
 from pathlib import Path
 
-from fire import Fire
 import sentencepiece as spm
+from fire import Fire
 
 
 def sp_train(text: Path, model_name_prefix: str):
@@ -22,6 +22,7 @@ def sp_train(text: Path, model_name_prefix: str):
             ]
         )
     )
+
 
 if __name__ == "__main__":
     Fire(sp_train)

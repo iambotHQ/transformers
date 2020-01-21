@@ -29,13 +29,8 @@ from torch.nn import CrossEntropyLoss, MSELoss
 from transformers.configuration_roberta import RobertaConfig
 from transformers.customs.label_smoothing_loss import LabelSmoothingLoss
 from transformers.file_utils import add_start_docstrings
-from transformers.modeling_bert import (
-    BertEmbeddings,
-    BertLayerNorm,
-    BertModel,
-    BertPreTrainedModel,
-    gelu,
-)
+from transformers.modeling_bert import BertEmbeddings, BertLayerNorm, BertModel, BertPreTrainedModel, gelu
+
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +50,7 @@ class RobertaEmbeddings(BertEmbeddings):
     def __init__(self, config):
         super(RobertaEmbeddings, self).__init__(config)
         self.padding_idx = 1
-        self.word_embeddings = nn.Embedding(
-            config.vocab_size, config.hidden_size, padding_idx=self.padding_idx
-        )
+        self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=self.padding_idx)
         self.position_embeddings = nn.Embedding(
             config.max_position_embeddings, config.hidden_size, padding_idx=self.padding_idx
         )
@@ -68,10 +61,7 @@ class RobertaEmbeddings(BertEmbeddings):
             # Position numbers begin at padding_idx+1. Padding symbols are ignored.
             # cf. fairseq's `utils.make_positions`
             position_ids = torch.arange(
-                self.padding_idx + 1,
-                seq_length + self.padding_idx + 1,
-                dtype=torch.long,
-                device=input_ids.device,
+                self.padding_idx + 1, seq_length + self.padding_idx + 1, dtype=torch.long, device=input_ids.device,
             )
             position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
         return super(RobertaEmbeddings, self).forward(
@@ -192,9 +182,7 @@ class RobertaModel(BertModel):
         self.embeddings = RobertaEmbeddings(config)
         self.init_weights()
 
-    def forward(
-        self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None
-    ):
+    def forward(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None):
         # if input_ids[:, 0].sum().item() != 0:
         #     logger.warning("A sequence with no special tokens has been passed to the RoBERTa model. "
         #                    "This model requires special tokens in order to work. "
@@ -249,9 +237,7 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
     pretrained_model_archive_map = ROBERTA_PRETRAINED_MODEL_ARCHIVE_MAP
     base_model_prefix = "roberta"
 
-    def __init__(
-        self, config, loss_function_type=torch.nn.functional.cross_entropy, **loss_function_kwargs
-    ):
+    def __init__(self, config, loss_function_type=torch.nn.functional.cross_entropy, **loss_function_kwargs):
         super(RobertaForSequenceClassification, self).__init__(config)
         self.loss_function = partial(loss_function_type, **loss_function_kwargs)
         self.num_labels = config.num_labels

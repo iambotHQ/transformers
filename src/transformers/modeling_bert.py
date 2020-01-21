@@ -19,8 +19,10 @@
 import logging
 import math
 import os
+from typing import Tuple
 
 import torch
+import torch.nn.functional as F
 from torch import nn
 from torch.nn import CrossEntropyLoss, MSELoss
 
@@ -1177,9 +1179,9 @@ class BertForSequenceClassification(BertPreTrainedModel):
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
         model = super().from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
-        pooler_name = kwargs.get('pooler', None)
-        if pooler_name and pooler_name.lower().startswith('concat'):
-           model.classifier = nn.Linear(model.config.hidden_size * 2, model.config.num_labels)
+        pooler_name = kwargs.get("pooler", None)
+        if pooler_name and pooler_name.lower().startswith("concat"):
+            model.classifier = nn.Linear(model.config.hidden_size * 2, model.config.num_labels)
         return model
 
 
