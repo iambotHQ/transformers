@@ -68,6 +68,7 @@ class SentencePieceTokenizer(PreTrainedTokenizer):
             normalized_token = normalized_token.replace(" ", "")
 
         tok_print(normalized_token)
+        return normalized_token
 
     @property
     def stop_id(self):

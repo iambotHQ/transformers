@@ -56,12 +56,13 @@ class CustomBertForNer(BertPreTrainedModel):
         self, outputs: Tuple[torch.Tensor, ...]
     ) -> Dict[str, torch.Tensor]:
         outputs_map = dict(last_hidden_state=outputs[0], pooler_output=outputs[1])
+
         if len(outputs) > 2:
             outputs_map["hidden_states"] = outputs[2]
         if len(outputs) > 3:
             outputs_map["attentions"] = outputs[3]
-        return outputs_map
 
+        return outputs_map
 
     def forward(
         self,
@@ -83,28 +84,49 @@ class CustomBertForNer(BertPreTrainedModel):
         outputs = self._convert_bert_outputs_to_map(outputs)
         sequence_output = outputs["last_hidden_state"]
 
-        if word_ids is not None and hasattr(self, 'tokens_pooler'):
+        if word_ids is not None and hasattr(self, "tokens_pooler"):
 
             word_ids[word_ids == -100] = -1
 
             _word_ids = word_ids.unsqueeze(-1) + 1
-            _mean = scatter.scatter_mean(sequence_output, _word_ids, dim=1).type(sequence_output.dtype)
+            _mean = scatter.scatter_mean(sequence_output, _word_ids, dim=1).type(
+                sequence_output.dtype
+            )
             _mean[:, 0, :] = sequence_output[:, 0, :]
-            _max = scatter.scatter_max(sequence_output, _word_ids, dim=1, fill_value=0)[0].type(sequence_output.dtype)
+            _max = scatter.scatter_max(sequence_output, _word_ids, dim=1, fill_value=0)[0].type(
+                sequence_output.dtype
+            )
             _max[:, 0, :] = sequence_output[:, 0, :]
             sequence_output = torch.cat([_mean, _max], dim=-1)
 
             word_ids[word_ids == -1] = -100
 
-            def transform_ids(word_ids: torch.Tensor, labels: torch.Tensor, pad_id: int = -100) -> torch.Tensor:
-                word_labels = labels[word_ids[word_ids != pad_id].unique_consecutive(return_counts=True)[1].cumsum(dim=0) - 1]
-                tensor = F.pad(word_labels, (0, sequence_output.shape[1] - 1 - word_labels.shape[0]), value=pad_id)
-                return tensor
+            if labels is not None:
 
-            labels = torch.stack(list(starmap(transform_ids, zip(word_ids[:, 1:], labels[:, 1:]))), dim=0)
-            labels = torch.cat((torch.tensor(-100).repeat(labels.shape[0], 1).to(labels.device), labels), dim=1)
-            attention_mask = torch.zeros_like(labels)
-            attention_mask[labels != -100] = 1
+                def transform_ids(
+                    word_ids: torch.Tensor, labels: torch.Tensor, pad_id: int = -100
+                ) -> torch.Tensor:
+                    word_labels = labels[
+                        word_ids[word_ids != pad_id]
+                        .unique_consecutive(return_counts=True)[1]
+                        .cumsum(dim=0)
+                        - 1
+                    ]
+                    tensor = F.pad(
+                        word_labels,
+                        (0, sequence_output.shape[1] - 1 - word_labels.shape[0]),
+                        value=pad_id,
+                    )
+                    return tensor
+
+                labels = torch.stack(
+                    list(starmap(transform_ids, zip(word_ids[:, 1:], labels[:, 1:]))), dim=0
+                )
+                labels = torch.cat(
+                    (torch.tensor(-100).repeat(labels.shape[0], 1).to(labels.device), labels), dim=1
+                )
+                attention_mask = torch.zeros_like(labels)
+                attention_mask[labels != -100] = 1
 
         sequence_output = self.dropout(sequence_output)
         logits = self.classifier(sequence_output)
@@ -123,7 +145,9 @@ class CustomBertForNer(BertPreTrainedModel):
 
         outputs["attention_mask"] = attention_mask
         outputs["logits"] = logits
-        outputs["labels"] = labels
+        
+        if labels is not None:
+            outputs["labels"] = labels
 
         return outputs  # (loss), scores, (hidden_states), (attentions)
 

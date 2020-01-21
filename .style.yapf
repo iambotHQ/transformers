@@ -1,0 +1,17 @@
+[style]
+column_limit=100
+spaces_before_comment=15, 20
+allow_multiline_dictionary_keys=true
+allow_multiline_lambdas=true
+arithmetic_precedence_indication=true
+blank_line_before_nested_class_or_def=true
+blank_lines_around_top_level_definition=2
+coalesce_brackets=true
+dedent_closing_brackets=true
+join_multiple_lines=true
+split_before_dict_set_generator=true
+split_complex_comprehension=true
+split_before_dot=true
+split_arguments_when_comma_terminated=true
+split_all_comma_separated_values=true
+split_all_top_level_comma_separated_values=true

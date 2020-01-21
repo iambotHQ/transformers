@@ -532,15 +532,13 @@ class BertPreTrainedModel(PreTrainedModel):
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
         model = super().from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
-        config = kwargs.get("config", None)
-        if config:
-            pooler_name = getattr(config, "pooler", None)
+        pooler_name = kwargs.get("pooler", None)
+        if pooler_name:
+            pooler_name = pooler_name.lower()
             pooler_class = BertPooler
-            if pooler_name:
-                pooler_name = pooler_name.lower()
-                if pooler_name.startswith("concat"):
-                    pooler_class = ConcatAvgMaxPooler
-            setattr(getattr(model, cls.base_model_prefix), "pooler", pooler_class(config))
+            if pooler_name.startswith("concat"):
+                pooler_class = ConcatAvgMaxPooler
+            setattr(getattr(model, cls.base_model_prefix), "pooler", pooler_class(model.config))
         return model
 
 
@@ -1175,6 +1173,14 @@ class BertForSequenceClassification(BertPreTrainedModel):
             outputs = (loss,) + outputs
 
         return outputs  # (loss), logits, (hidden_states), (attentions)
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+        model = super().from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
+        pooler_name = kwargs.get('pooler', None)
+        if pooler_name and pooler_name.lower().startswith('concat'):
+           model.classifier = nn.Linear(model.config.hidden_size * 2, model.config.num_labels)
+        return model
 
 
 @add_start_docstrings(
