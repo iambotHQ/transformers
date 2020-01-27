@@ -15,7 +15,8 @@
 # limitations under the License.
 """PyTorch RoBERTa model. """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import logging
 from copy import deepcopy
@@ -29,8 +30,9 @@ from torch.nn import CrossEntropyLoss, MSELoss
 from transformers.configuration_roberta import RobertaConfig
 from transformers.customs.label_smoothing_loss import LabelSmoothingLoss
 from transformers.file_utils import add_start_docstrings
-from transformers.modeling_bert import BertEmbeddings, BertLayerNorm, BertModel, BertPreTrainedModel, gelu
-
+from transformers.modeling_bert import (BertEmbeddings, BertLayerNorm,
+                                        BertModel, BertPreTrainedModel, gelu)
+from transformers.modeling_roberta import RobertaModel
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,8 @@ ROBERTA_PRETRAINED_MODEL_ARCHIVE_MAP = {
     "roberta-large": "https://s3.amazonaws.com/models.huggingface.co/bert/roberta-large-pytorch_model.bin",
     "roberta-large-mnli": "https://s3.amazonaws.com/models.huggingface.co/bert/roberta-large-mnli-pytorch_model.bin",
     "distilroberta-base": "https://s3.amazonaws.com/models.huggingface.co/bert/distilroberta-base-pytorch_model.bin",
+    "roberta-base-openai-detector": "https://s3.amazonaws.com/models.huggingface.co/bert/roberta-base-openai-detector-pytorch_model.bin",
+    "roberta-large-openai-detector": "https://s3.amazonaws.com/models.huggingface.co/bert/roberta-large-openai-detector-pytorch_model.bin",
 }
 
 
@@ -48,25 +52,52 @@ class RobertaEmbeddings(BertEmbeddings):
     """
 
     def __init__(self, config):
-        super(RobertaEmbeddings, self).__init__(config)
+        super().__init__(config)
         self.padding_idx = 1
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=self.padding_idx)
         self.position_embeddings = nn.Embedding(
             config.max_position_embeddings, config.hidden_size, padding_idx=self.padding_idx
         )
 
-    def forward(self, input_ids, token_type_ids=None, position_ids=None):
-        seq_length = input_ids.size(1)
+    def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         if position_ids is None:
-            # Position numbers begin at padding_idx+1. Padding symbols are ignored.
-            # cf. fairseq's `utils.make_positions`
-            position_ids = torch.arange(
-                self.padding_idx + 1, seq_length + self.padding_idx + 1, dtype=torch.long, device=input_ids.device,
-            )
-            position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
-        return super(RobertaEmbeddings, self).forward(
-            input_ids, token_type_ids=token_type_ids, position_ids=position_ids
+            if input_ids is not None:
+                # Create the position ids from the input token ids. Any padded tokens remain padded.
+                position_ids = self.create_position_ids_from_input_ids(input_ids).to(input_ids.device)
+            else:
+                position_ids = self.create_position_ids_from_inputs_embeds(inputs_embeds)
+
+        return super().forward(
+            input_ids, token_type_ids=token_type_ids, position_ids=position_ids, inputs_embeds=inputs_embeds
         )
+
+    def create_position_ids_from_input_ids(self, x):
+        """ Replace non-padding symbols with their position numbers. Position numbers begin at
+        padding_idx+1. Padding symbols are ignored. This is modified from fairseq's
+        `utils.make_positions`.
+
+        :param torch.Tensor x:
+        :return torch.Tensor:
+        """
+        mask = x.ne(self.padding_idx).long()
+        incremental_indicies = torch.cumsum(mask, dim=1) * mask
+        return incremental_indicies + self.padding_idx
+
+    def create_position_ids_from_inputs_embeds(self, inputs_embeds):
+        """ We are provided embeddings directly. We cannot infer which are padded so just generate
+        sequential position ids.
+
+        :param torch.Tensor inputs_embeds:
+        :return torch.Tensor:
+        """
+        input_shape = inputs_embeds.size()[:-1]
+        sequence_length = input_shape[1]
+
+        position_ids = torch.arange(
+            self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=torch.long, device=inputs_embeds.device
+        )
+        return position_ids.unsqueeze(0).expand(input_shape)
+
 
 
 ROBERTA_START_DOCSTRING = r"""    The RoBERTa model was proposed in
@@ -135,65 +166,11 @@ ROBERTA_INPUTS_DOCSTRING = r"""
             Mask to nullify selected heads of the self-attention modules.
             Mask values selected in ``[0, 1]``:
             ``1`` indicates the head is **not masked**, ``0`` indicates the head is **masked**.
+        **inputs_embeds**: (`optional`) ``torch.FloatTensor`` of shape ``(batch_size, sequence_length, embedding_dim)``:
+            Optionally, instead of passing ``input_ids`` you can choose to directly pass an embedded representation.
+            This is useful if you want more control over how to convert `input_ids` indices into associated vectors
+            than the model's internal embedding lookup matrix.
 """
-
-
-@add_start_docstrings(
-    "The bare RoBERTa Model transformer outputting raw hidden-states without any specific head on top.",
-    ROBERTA_START_DOCSTRING,
-    ROBERTA_INPUTS_DOCSTRING,
-)
-class RobertaModel(BertModel):
-    r"""
-    Outputs: `Tuple` comprising various elements depending on the configuration (config) and inputs:
-        **last_hidden_state**: ``torch.FloatTensor`` of shape ``(batch_size, sequence_length, hidden_size)``
-            Sequence of hidden-states at the output of the last layer of the model.
-        **pooler_output**: ``torch.FloatTensor`` of shape ``(batch_size, hidden_size)``
-            Last layer hidden-state of the first token of the sequence (classification token)
-            further processed by a Linear layer and a Tanh activation function. The Linear
-            layer weights are trained from the next sentence prediction (classification)
-            objective during Bert pretraining. This output is usually *not* a good summary
-            of the semantic content of the input, you're often better with averaging or pooling
-            the sequence of hidden-states for the whole input sequence.
-        **hidden_states**: (`optional`, returned when ``config.output_hidden_states=True``)
-            list of ``torch.FloatTensor`` (one for the output of each layer + the output of the embeddings)
-            of shape ``(batch_size, sequence_length, hidden_size)``:
-            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        **attentions**: (`optional`, returned when ``config.output_attentions=True``)
-            list of ``torch.FloatTensor`` (one for each layer) of shape ``(batch_size, num_heads, sequence_length, sequence_length)``:
-            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention heads.
-
-    Examples::
-
-        tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-        model = RobertaModel.from_pretrained('roberta-base')
-        input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute")).unsqueeze(0)  # Batch size 1
-        outputs = model(input_ids)
-        last_hidden_states = outputs[0]  # The last hidden-state is the first element of the output tuple
-
-    """
-    config_class = RobertaConfig
-    pretrained_model_archive_map = ROBERTA_PRETRAINED_MODEL_ARCHIVE_MAP
-    base_model_prefix = "roberta"
-
-    def __init__(self, config):
-        super(RobertaModel, self).__init__(config)
-
-        self.embeddings = RobertaEmbeddings(config)
-        self.init_weights()
-
-    def forward(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None):
-        # if input_ids[:, 0].sum().item() != 0:
-        #     logger.warning("A sequence with no special tokens has been passed to the RoBERTa model. "
-        #                    "This model requires special tokens in order to work. "
-        #                    "Please specify add_special_tokens=True in your encoding.")
-        return super(RobertaModel, self).forward(
-            input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            position_ids=position_ids,
-            head_mask=head_mask,
-        )
 
 
 @add_start_docstrings(
@@ -246,11 +223,12 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
 
     def forward(
         self,
-        input_ids,
+        input_ids=None,
         attention_mask=None,
         token_type_ids=None,
         position_ids=None,
         head_mask=None,
+        inputs_embeds=None,
         labels=None,
         hidden=None,
     ):
@@ -260,6 +238,7 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
             token_type_ids=token_type_ids,
             position_ids=position_ids,
             head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
         )
         sequence_output = outputs[0]
         logits = self.classifier(sequence_output, hidden=hidden)

@@ -32,7 +32,7 @@ class SentencePieceTokenizer(PreTrainedTokenizer):
             mask_token=mask_token,
             eos_token=eos_token,
             bos_token=bos_token,
-            **kwargs,
+            **kwargs
         )
         self.max_len_single_sentence = self.max_len
 
