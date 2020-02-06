@@ -1,27 +1,33 @@
 [tool.poetry]
 name = "transformers"
-version = "0.1.0"
-description = ""
-authors = ["Grzegorz <suszka.grzegorz@gmail.com>"]
+version = "2.3.0"
+description = "State-of-the-art Natural Language Processing for TensorFlow 2.0 and PyTorch"
+authors = ["Thomas Wolf, Lysandre Debut, Victor Sanh, Julien Chaumond, Google AI Language Team Authors, Open AI team Authors, Facebook AI Authors, Carnegie Mellon University Authors <thomas@huggingface.co>"]
+license = "Apache"
+keywords = ["NLP", "deep", "learning", "transformer", "pytorch", "tensorflow", "BERT", "GPT", "GPT-2", "google", "openai", "CMU"]
+classifiers = ["Development Status :: 5 - Production/Stable", "Intended Audience :: Developers", "Intended Audience :: Education", "Intended Audience :: Science/Research", "License :: OSI Approved :: Apache Software License", "Operating System :: OS Independent", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.5", "Programming Language :: Python :: 3.6", "Programming Language :: Python :: 3.7", "Topic :: Scientific/Engineering :: Artificial Intelligence"]
+readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.7"
-tqdm = "^4.36.1"
-boto3 = "^1.9.242"
-requests = "^2.22.0"
-regex = "^2019.8.19"
-sentencepiece = "^0.1.83"
-sacremoses = "^0.0.35"
-torch = {version = "^1.2.0", allows-prereleases = true}
-lm = { git = "https://github.com/iambotHQ/transformer-lm.git", branch = "master" }
-seqeval = "^0.0.12"
-tensorboardx = {version = "^1.9", allows-prereleases = true}
-fire = "^0.2.1"
+python = "3.7"
+tqdm = ">=4.27"
+boto3 = "*"
+requests = "*"
+sentencepiece = "*"
+sacremoses = "*"
+filelock = "*"
+misspell = "*"
+numpy = "*"
+tokenizers = "0.0.11"
+torch = "1.3.1"
+torch-scatter = "1.4.0"
 
 [tool.poetry.dev-dependencies]
-black = {version = "^19.3b0", allows-prereleases = true}
-rope = {version = "^0.14.0", allows-prereleases = true}
-ipdb = "^0.12.2"
+black = {version = "^19.10b0", allow-prereleases = true}
+rope = {version = "^0.16.0", allow-prereleases = true}
+ipdb = {version = "^0.12.3", allow-prereleases = true}
+isort = {version = "^4.3.21", allow-prereleases = true}
+flake8 = {version = "^3.7.9", allow-prereleases = true}
 
 [tool.black]
 line-length = 100
@@ -30,7 +36,7 @@ include = '\.pyi?$'
 exclude = "generated"
 
 [build-system]
-requires = ["poetry>=0.12"]
+requires = ["poetry>=1.0.3"]
 build-backend = "poetry.masonry.api"
 
 [mypy]
@@ -47,4 +53,3 @@ warn_unused_ignores = true
 disallow_untyped_defs = false
 check_untyped_defs = true
 no_incremental = true
-
