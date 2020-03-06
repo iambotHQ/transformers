@@ -1,12 +1,10 @@
-from functools import lru_cache
 from pathlib import Path
-from typing import List, Optional, Sequence, Union, cast
+from typing import List, Optional, Sequence, Union
 
 from sentencepiece import SentencePieceProcessor
+import torch
 
-import lm
 from transformers.tokenization_utils import PreTrainedTokenizer
-
 
 class SentencePieceTokenizer(PreTrainedTokenizer):
     def __init__(
@@ -63,11 +61,12 @@ class SentencePieceTokenizer(PreTrainedTokenizer):
         return self.sp.id_to_piece(index)
 
     def convert_ids_to_tokens(
-        self, ids: Union[Sequence[int]], skip_special_tokens: bool = False
+        self, ids: Union[torch.Tensor, Sequence[int], int], skip_special_tokens: bool = False
     ) -> List[str]:
         if isinstance(ids, int):
             return self._convert_id_to_token(ids)
-
+        elif torch.is_tensor(ids):
+            ids = ids.tolist()
         return [
             self._convert_id_to_token(index)
             for index in ids

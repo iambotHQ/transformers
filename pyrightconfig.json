@@ -1,0 +1,16 @@
+{
+  "enableTypeIgnoreComments": true,
+  "include": ["src"],
+  "strictDictionaryInference": true,
+  "typingsPath": "",
+  "verboseOutput": true,
+  "pythonPlatform": "Linux",
+  "reportTypeshedErrors": true,
+  "reportMissingImports": true,
+  "exclude": ["__init__.py", ".git"],
+  "executionEnvironments": [
+    {
+      "root": "src"
+    }
+  ]
+}
