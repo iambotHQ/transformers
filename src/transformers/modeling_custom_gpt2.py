@@ -3,7 +3,7 @@ from lm.inference import ModelWrapper
 from lm.model import OutputGetters
 
 from transformers.configuration_gpt2 import GPT2Config
-from transformers.tokenization_roberta import lru_cache
+from functools import lru_cache
 
 class CustomGPT2:
     config = GPT2Config()
