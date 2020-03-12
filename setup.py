@@ -113,6 +113,9 @@ setup(
         "sentencepiece",
         # for XLM
         "sacremoses",
+        # for typos
+        "misspell",
+        "torch-scatter"
     ],
     extras_require=extras,
     scripts=["transformers-cli"],

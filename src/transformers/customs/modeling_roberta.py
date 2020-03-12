@@ -271,23 +271,25 @@ class RobertaClassificationHead(nn.Module):
 
 
 class RobertaClassificationHeadBiLstm(nn.Module):
+    dir_num: int = 2
+
     def __init__(self, config, device: torch.device = torch.device("cpu")):
         super(RobertaClassificationHeadBiLstm, self).__init__()
         self.lstm = nn.LSTM(
             input_size=config.hidden_size,
             hidden_size=config.bilstm_hidden_size,
-            bidirectional=True,
+            bidirectional=self.dir_num == 2,
             batch_first=True,
             num_layers=config.bilstm_num_layers,
             dropout=config.bilstm_dropout,
         )
-        self.hidden2label = nn.Linear(config.bilstm_hidden_size * 2, config.num_labels)
+        self.hidden2label = nn.Linear(config.bilstm_hidden_size * self.dir_num, config.num_labels)
 
     @classmethod
     def init_hidden(cls, hidden_size: int, num_layers: int, batch_size: int, bidir: bool = True):
         return (
-            Variable(torch.zeros((int(bidir) + 1) * num_layers, batch_size, hidden_size)),
-            Variable(torch.zeros((int(bidir) + 1) * num_layers, batch_size, hidden_size)),
+            Variable(torch.zeros(cls.dir_num * num_layers, batch_size, hidden_size)),
+            Variable(torch.zeros(cls.dir_num * num_layers, batch_size, hidden_size)),
         )
 
     def forward(self, input, hidden, **kwargs):

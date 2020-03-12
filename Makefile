@@ -24,6 +24,7 @@ test-examples:
 	python -m pytest -n auto --dist=loadfile -s -v ./examples/
 	
 install:
+	pip install torch-scatter
 	pip uninstall -y transformers
 	python setup.py install
 	rm -rfv dist build
