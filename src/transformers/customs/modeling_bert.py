@@ -7,7 +7,11 @@ import torch.nn.functional as F
 import torch_scatter as scatter
 
 from transformers.configuration_bert import BertConfig
-from transformers.modeling_bert import BertModel, BertPreTrainedModel
+from transformers.modeling_bert import (
+    BertModel,
+    BertPreTrainedModel,
+    BertForSequenceClassification as OrigBertForSequenceClassification,
+)
 
 
 class SimpleConcatAvgMaxTokensPooler(nn.Module):
@@ -17,13 +21,17 @@ class SimpleConcatAvgMaxTokensPooler(nn.Module):
         self.max_pool = nn.AdaptiveMaxPool1d(1)
 
     def forward(self, tokens_embs: torch.Tensor, *args) -> torch.Tensor:  # type: ignore
-        return torch.cat([self.avg_pool(tokens_embs).squeeze(), self.max_pool(tokens_embs).squeeze()], dim=0).squeeze()
+        return torch.cat(
+            [self.avg_pool(tokens_embs).squeeze(), self.max_pool(tokens_embs).squeeze()], dim=0
+        ).squeeze()
 
 
 class SimpleAvgOrMaxTokensPoolerWithMask(nn.Module):
     def __init__(self, config):
         super(SimpleAvgOrMaxTokensPoolerWithMask, self).__init__()
-        word_tokens_pooling_method = getattr(config, "word_tokens_pooling_method", "").lower().capitalize()
+        word_tokens_pooling_method = (
+            getattr(config, "word_tokens_pooling_method", "").lower().capitalize()
+        )
         self.pooler = getattr(nn, f"Adaptive{word_tokens_pooling_method}Pool1d")(1)
 
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
@@ -49,7 +57,9 @@ class CustomBertForNer(BertPreTrainedModel):
 
         self.init_weights()
 
-    def _convert_bert_outputs_to_map(self, outputs: Tuple[torch.Tensor, ...]) -> Dict[str, torch.Tensor]:
+    def _convert_bert_outputs_to_map(
+        self, outputs: Tuple[torch.Tensor, ...]
+    ) -> Dict[str, torch.Tensor]:
         outputs_map = dict(last_hidden_state=outputs[0], pooler_output=outputs[1])
 
         if len(outputs) > 2:
@@ -84,9 +94,13 @@ class CustomBertForNer(BertPreTrainedModel):
             word_ids[word_ids == -100] = -1
 
             _word_ids = word_ids.unsqueeze(-1) + 1
-            _mean = scatter.scatter_mean(sequence_output, _word_ids, dim=1).type(sequence_output.dtype)
+            _mean = scatter.scatter_mean(sequence_output, _word_ids, dim=1).type(
+                sequence_output.dtype
+            )
             _mean[:, 0, :] = sequence_output[:, 0, :]
-            _max = scatter.scatter_max(sequence_output, _word_ids, dim=1, fill_value=0)[0].type(sequence_output.dtype)
+            _max = scatter.scatter_max(sequence_output, _word_ids, dim=1, fill_value=0)[0].type(
+                sequence_output.dtype
+            )
             _max[:, 0, :] = sequence_output[:, 0, :]
             sequence_output = torch.cat([_mean, _max], dim=-1)
 
@@ -94,17 +108,28 @@ class CustomBertForNer(BertPreTrainedModel):
 
             if labels is not None:
 
-                def transform_ids(word_ids: torch.Tensor, labels: torch.Tensor, pad_id: int = -100) -> torch.Tensor:
+                def transform_ids(
+                    word_ids: torch.Tensor, labels: torch.Tensor, pad_id: int = -100
+                ) -> torch.Tensor:
                     word_labels = labels[
-                        word_ids[word_ids != pad_id].unique_consecutive(return_counts=True)[1].cumsum(dim=0) - 1
+                        word_ids[word_ids != pad_id]
+                        .unique_consecutive(return_counts=True)[1]
+                        .cumsum(dim=0)
+                        - 1
                     ]
                     tensor = F.pad(
-                        word_labels, (0, sequence_output.shape[1] - 1 - word_labels.shape[0]), value=pad_id,
+                        word_labels,
+                        (0, sequence_output.shape[1] - 1 - word_labels.shape[0]),
+                        value=pad_id,
                     )
                     return tensor
 
-                labels = torch.stack(list(starmap(transform_ids, zip(word_ids[:, 1:], labels[:, 1:]))), dim=0)
-                labels = torch.cat((torch.tensor(-100).repeat(labels.shape[0], 1).to(labels.device), labels), dim=1)
+                labels = torch.stack(
+                    list(starmap(transform_ids, zip(word_ids[:, 1:], labels[:, 1:]))), dim=0
+                )
+                labels = torch.cat(
+                    (torch.tensor(-100).repeat(labels.shape[0], 1).to(labels.device), labels), dim=1
+                )
                 attention_mask = torch.zeros_like(labels)
                 attention_mask[labels != -100] = 1
 
@@ -156,14 +181,18 @@ class CustomBertForQuestionAnswering(BertPreTrainedModel):
         windowed_mode = False
 
         if seq_len > self.config.max_position_embeddings:
-            assert batch_size == 1, "sliding window mode is not currently supported for batch_size > 1"
+            assert (
+                batch_size == 1
+            ), "sliding window mode is not currently supported for batch_size > 1"
             assert position_ids is None
             assert isinstance(num_question_tokens, int)
 
             windowed_mode = True
 
             input_ids = torch.squeeze(input_ids, dim=0)
-            question_ids, paragraph_ids = torch.split(input_ids, [num_question_tokens, seq_len - num_question_tokens])
+            question_ids, paragraph_ids = torch.split(
+                input_ids, [num_question_tokens, seq_len - num_question_tokens]
+            )
             windowed_paragraph_ids, paragraph_position_ids = self._apply_sliding_window_to_single_batch(
                 paragraph_ids, self.config.max_position_embeddings - num_question_tokens
             )
@@ -172,7 +201,11 @@ class CustomBertForQuestionAnswering(BertPreTrainedModel):
             seq_len = self.config.max_position_embeddings
 
             input_ids = torch.cat(
-                (question_ids.unsqueeze(0).expand(batch_size, num_question_tokens), windowed_paragraph_ids), dim=-1
+                (
+                    question_ids.unsqueeze(0).expand(batch_size, num_question_tokens),
+                    windowed_paragraph_ids,
+                ),
+                dim=-1,
             )
 
         if num_question_tokens is None:
@@ -210,7 +243,9 @@ class CustomBertForQuestionAnswering(BertPreTrainedModel):
             )
 
             question_logits = question_logits.min(dim=0, keepdim=True)[0]
-            paragraph_logits = self._compress_sliding_window(paragraph_logits, paragraph_position_ids)
+            paragraph_logits = self._compress_sliding_window(
+                paragraph_logits, paragraph_position_ids
+            )
 
             logits = torch.cat((question_logits, paragraph_logits), dim=1)
 
@@ -239,7 +274,9 @@ class CustomBertForQuestionAnswering(BertPreTrainedModel):
         return outputs  # (loss), start_logits, end_logits, (hidden_states), (attentions)
 
     def _create_type_tokens_for_single_batch(self, num_question_tokens, seq_len):
-        return torch.cat([torch.zeros(num_question_tokens), torch.ones(seq_len - num_question_tokens)]).long()
+        return torch.cat(
+            [torch.zeros(num_question_tokens), torch.ones(seq_len - num_question_tokens)]
+        ).long()
 
     def _apply_sliding_window_to_single_batch(self, tokens, window_size=512, window_stride=None):
         if window_stride is None:
@@ -266,7 +303,9 @@ class CustomBertForQuestionAnswering(BertPreTrainedModel):
 
         middle_positions = positions[:, window_size // 2]
         tokens_best_window_idxs = (
-            (torch.unsqueeze(middle_positions, 0) - torch.arange(num_tokens).unsqueeze(-1)).abs().argmin(dim=1)
+            (torch.unsqueeze(middle_positions, 0) - torch.arange(num_tokens).unsqueeze(-1))
+            .abs()
+            .argmin(dim=1)
         )
         token_mask = torch.stack(
             [
@@ -276,3 +315,13 @@ class CustomBertForQuestionAnswering(BertPreTrainedModel):
         )
 
         return windowed_tokens[token_mask].unsqueeze(0)
+
+
+class BertForSequenceClassification(OrigBertForSequenceClassification):
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+        model = super().from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
+        pooler_name = kwargs.get("pooler", None)
+        if pooler_name and pooler_name.lower().startswith("concat"):
+            model.classifier = nn.Linear(model.config.hidden_size * 2, model.config.num_labels)
+        return model

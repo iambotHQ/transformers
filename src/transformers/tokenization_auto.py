@@ -40,7 +40,6 @@ from .configuration_auto import (
 )
 from .configuration_marian import MarianConfig
 from .configuration_utils import PretrainedConfig
-from .customs import SentencePieceTokenizer
 from .tokenization_albert import AlbertTokenizer
 from .tokenization_bart import BartTokenizer
 from .tokenization_bert import BertTokenizer, BertTokenizerFast

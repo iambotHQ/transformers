@@ -22,13 +22,13 @@ class CustomGPT2(GPT2LMHeadModel):
             f"{path}/model.pt", True, True, "cpu", output_getter=OutputGetters.raw
         )
         model.config = cls.config
-        setattr(model.config, 'generation_mode', True)
-        setattr(model.config, 'output_past', False)
-        setattr(model.config, 'vocab_size', model.hparams.n_vocab)
-        setattr(model.config, 'n_ctx', model.hparams.n_ctx)
-        setattr(model.config, 'n_embd', model.hparams.n_embed)
-        setattr(model.config, 'n_layer', model.hparams.n_layer)
-        setattr(model.config, 'n_head', model.hparams.n_head)
+        setattr(model.config, "generation_mode", True)
+        setattr(model.config, "output_past", False)
+        setattr(model.config, "vocab_size", model.hparams.n_vocab)
+        setattr(model.config, "n_ctx", model.hparams.n_ctx)
+        setattr(model.config, "n_embd", model.hparams.n_embed)
+        setattr(model.config, "n_layer", model.hparams.n_layer)
+        setattr(model.config, "n_head", model.hparams.n_head)
         return cls(model).to_generation_mode()
 
     def to_generation_mode(self):

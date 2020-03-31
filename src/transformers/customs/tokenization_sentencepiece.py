@@ -6,6 +6,7 @@ import torch
 
 from transformers.tokenization_utils import PreTrainedTokenizer
 
+
 class SentencePieceTokenizer(PreTrainedTokenizer):
     def __init__(
         self,
