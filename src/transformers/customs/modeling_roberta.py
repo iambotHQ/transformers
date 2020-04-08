@@ -148,10 +148,10 @@ class BCN(nn.Module):
         # integrated_encodings = torch.cat([integrated_encodings, input], dim=-1)
 
         # Simple pooling layers
-        max_maksed_integrated_encodings = util.replace_masked_values(integrated_encodings, text_mask.unsqueeze(2), -1e7)  # [bs, seq_len, 600]
+        max_masked_integrated_encodings = util.replace_masked_values(integrated_encodings, text_mask.unsqueeze(2), -1e7)  # [bs, seq_len, 600]
         min_masked_integrated_encodings = util.replace_masked_values(integrated_encodings, text_mask.unsqueeze(2), +1e7)  # [bs, seq_len, 600]
 
-        max_pool = torch.max(max_maksed_integrated_encodings, 1)[0]  # [bs, 600]
+        max_pool = torch.max(max_masked_integrated_encodings, 1)[0]  # [bs, 600]
         min_pool = torch.min(min_masked_integrated_encodings, 1)[0]  # [bs, 600]
         mean_pool = torch.sum(integrated_encodings, 1) / torch.sum(text_mask, 1, keepdim=True)  # [bs, 600]
 
