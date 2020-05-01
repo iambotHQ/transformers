@@ -115,6 +115,7 @@ setup(
         "sacremoses",
         # for typos
         "misspell",
+        "allennlp"
     ],
     extras_require=extras,
     scripts=["transformers-cli"],
