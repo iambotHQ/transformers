@@ -48,14 +48,17 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
 
         self.roberta = RobertaModel(config)
         self.classifier = RobertaClassificationHead(config)
-
         self.loss_function = partial(loss_function_type, **loss_function_kwargs)
 
     def forward(
         self, input_ids=None, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None, inputs_embeds=None, labels=None, hidden=None,
     ):
         outputs = self.roberta(input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids, position_ids=position_ids, head_mask=head_mask, inputs_embeds=inputs_embeds,)
-        sequence_output = outputs[0]
+        if self.config.concat_last_n_hiddens == 1:
+            sequence_output = outputs[0]
+        else:
+            sequence_output = torch.cat(outputs[2][-self.config.concat_last_n_hiddens :], dim=-1)
+
         logits = self.classifier(sequence_output, hidden=hidden, text_mask=attention_mask)
 
         outputs = (logits,) + outputs[2:]
@@ -70,9 +73,8 @@ class RobertaClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
-        super(RobertaClassificationHead, self).__init__()
+        super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.act_func = nn.Tanh()
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
@@ -80,7 +82,7 @@ class RobertaClassificationHead(nn.Module):
         x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
         x = self.dropout(x)
         x = self.dense(x)
-        x = self.act_func(x)
+        x = torch.tanh(x)
         x = self.dropout(x)
         x = self.out_proj(x)
         return x
@@ -91,15 +93,23 @@ class RobertaClassificationHeadBiLstm(nn.Module):
 
     def __init__(self, config, device: torch.device = torch.device("cpu")):
         super(RobertaClassificationHeadBiLstm, self).__init__()
-        self.lstm = nn.LSTM(input_size=config.hidden_size, hidden_size=config.bilstm_hidden_size, bidirectional=self.dir_num == 2, batch_first=True, num_layers=config.bilstm_num_layers, dropout=config.bilstm_dropout,)
+        self.lstm = nn.LSTM(
+            input_size=config.hidden_size * config.concat_last_n_hiddens,
+            hidden_size=config.bilstm_hidden_size,
+            bidirectional=self.dir_num == 2,
+            batch_first=True,
+            num_layers=config.bilstm_num_layers,
+            dropout=config.bilstm_dropout,
+        )
         self.dropout = torch.nn.AlphaDropout()
+        self.act = torch.nn.SELU()
         self.hidden2label = nn.Linear(config.bilstm_hidden_size * self.dir_num, config.num_labels)
 
     @classmethod
     def init_hidden(cls, hidden_size: int, num_layers: int, batch_size: int, bidir: bool = True):
         return (
-            Variable(torch.nn.init.xavier_uniform_(torch.Tensor(cls.dir_num * num_layers, batch_size, hidden_size).type(torch.FloatTensor)), requires_grad=True,),
-            Variable(torch.nn.init.xavier_uniform_(torch.Tensor(cls.dir_num * num_layers, batch_size, hidden_size).type(torch.FloatTensor)), requires_grad=True,),
+            Variable(torch.zeros(cls.dir_num * num_layers, batch_size, hidden_size).type(torch.FloatTensor), requires_grad=True,),
+            Variable(torch.zeros(cls.dir_num * num_layers, batch_size, hidden_size).type(torch.FloatTensor), requires_grad=True,),
         )
 
     def forward(self, input, hidden, **kwargs):
