@@ -1,0 +1,57 @@
+[tool.poetry]
+name = "transformers"
+version = "2.3.0"
+description = "State-of-the-art Natural Language Processing for TensorFlow 2.0 and PyTorch"
+authors = ["Thomas Wolf, Lysandre Debut, Victor Sanh, Julien Chaumond, Google AI Language Team Authors, Open AI team Authors, Facebook AI Authors, Carnegie Mellon University Authors <thomas@huggingface.co>"]
+license = "Apache"
+keywords = ["NLP", "deep", "learning", "transformer", "pytorch", "tensorflow", "BERT", "GPT", "GPT-2", "google", "openai", "CMU"]
+classifiers = ["Development Status :: 5 - Production/Stable", "Intended Audience :: Developers", "Intended Audience :: Education", "Intended Audience :: Science/Research", "License :: OSI Approved :: Apache Software License", "Operating System :: OS Independent", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.5", "Programming Language :: Python :: 3.6", "Programming Language :: Python :: 3.7", "Topic :: Scientific/Engineering :: Artificial Intelligence"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.7"
+tqdm = "^4.43.0"
+boto3 = "^1.12.19"
+requests = "^2.23.0"
+sentencepiece = "^0.1.85"
+sacremoses = "^0.0.38"
+filelock = "^3.0.12"
+misspell = "^0.6"
+numpy = "^1.18.1"
+tokenizers = "^0.6.0"
+torch = "^1.4.0"
+
+
+[tool.poetry.dev-dependencies]
+black = {version = "^19.10b0", allow-prereleases = true}
+rope = {version = "^0.16.0", allow-prereleases = true}
+ipdb = {version = "^0.12.3", allow-prereleases = true}
+isort = {version = "^4.3.21", allow-prereleases = true}
+flake8 = {version = "^3.7.9", allow-prereleases = true}
+pylint = "^2.4.4"
+mypy = "^0.770"
+
+[tool.black]
+line-length = 100
+target-version = ['py37']
+include = '\.pyi?$'
+exclude = "generated"
+
+[build-system]
+requires = ["poetry>=1.0.3"]
+build-backend = "poetry.masonry.api"
+
+[mypy]
+python_version = 3.7
+show_column_numbers = true
+follow_imports = "normal"
+ignore_missing_imports = true
+disallow_untyped_calls = false
+warn_return_any = true
+strict_optional = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+no_incremental = true
