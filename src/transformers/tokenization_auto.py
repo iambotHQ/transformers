@@ -59,7 +59,8 @@ from .tokenization_transfo_xl import TransfoXLTokenizer, TransfoXLTokenizerFast
 from .tokenization_xlm import XLMTokenizer
 from .tokenization_xlm_roberta import XLMRobertaTokenizer
 from .tokenization_xlnet import XLNetTokenizer
-
+from .customs import SentencePieceTokenizer
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -191,7 +192,11 @@ class AutoTokenizer:
         if not isinstance(config, PretrainedConfig):
             config = AutoConfig.from_pretrained(pretrained_model_name_or_path, **kwargs)
 
-        if "bert-base-japanese" in pretrained_model_name_or_path:
+        path: Path = Path(pretrained_model_name_or_path)
+        if path.is_dir() and (path / 'sp.model').exists():
+            return SentencePieceTokenizer.from_pretrained(pretrained_model_name_or_path, **kwargs)
+
+        if "berpretrained_model_name_or_patht-base-japanese" in pretrained_model_name_or_path:
             return BertJapaneseTokenizer.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
 
         use_fast = kwargs.pop("use_fast", False)
