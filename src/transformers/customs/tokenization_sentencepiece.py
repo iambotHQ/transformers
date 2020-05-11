@@ -1,6 +1,5 @@
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
-from overrides import overrides
+from typing import List, Sequence, Union
 from sentencepiece import SentencePieceProcessor
 import torch
 from typing import Any, Dict
@@ -8,7 +7,7 @@ from transformers.tokenization_utils import PreTrainedTokenizer
 
 from transformers.tokenization_roberta import RobertaTokenizer
 
-from lm import END_OF_LINE, END_OF_TEXT
+from logzero import logger
 
 
 class SentencePieceTokenizer(PreTrainedTokenizer):
@@ -26,13 +25,21 @@ class SentencePieceTokenizer(PreTrainedTokenizer):
         sampling: bool = False,
         **kwargs,
     ):
+        logger.info("Creating SentencePieceToenizer" + "in sampling mode" if sampling else "")
         self.sp = self.load_sentencepieceprocessor(model_path)
         self._eot_token = eot_token
         super(SentencePieceTokenizer, self).__init__(
-            unk_token=unk_token, sep_token=sep_token, pad_token=pad_token, cls_token=cls_token, mask_token=mask_token, eos_token=eos_token, bos_token=bos_token, **kwargs,
+            unk_token=unk_token,
+            sep_token=sep_token,
+            pad_token=pad_token,
+            cls_token=cls_token,
+            mask_token=mask_token,
+            eos_token=eos_token,
+            bos_token=bos_token,
+            **kwargs,
         )
         self.max_len_single_sentence = self.max_len
-        self.sampling = sampling 
+        self.sampling = sampling
 
     def __len__(self):
         return self.vocab_size
@@ -75,7 +82,14 @@ class SentencePieceTokenizer(PreTrainedTokenizer):
     def _tokenize(self, text: str, add_prefix_space: bool = False) -> List[str]:  # type: ignore
         if add_prefix_space:
             text = " " + text
-        return self.sp.sample_encode_as_pieces(text, -1, 0.1) if self.sampling else self.sp.encode_as_pieces(text)
+        toks: List[str] = []
+        if self.sampling:
+            toks = self.sp.sample_encode_as_pieces(text, -1, 0.1)
+            if not toks:
+                logger.warning(f"Loaded tokenizer does not support sampling. Using vanilla mode.")
+        if not toks:
+            toks = self.sp.encode_as_pieces(text)
+        return toks
 
     def convert_tokens_to_string(self, tokens: List[str], **kwargs: Dict[str, Any]) -> str:
         return "".join(tokens).replace("▁", " ").strip()
