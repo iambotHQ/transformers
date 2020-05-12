@@ -192,13 +192,12 @@ class AutoTokenizer:
         if path.is_dir() and (path / 'sp.model').exists():
             return SentencePieceTokenizer.from_pretrained(pretrained_model_name_or_path, **kwargs)
 
+        if "bert-base-japanese" in pretrained_model_name_or_path:
+            return BertJapaneseTokenizer.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
+
         config = kwargs.pop("config", None)
         if not isinstance(config, PretrainedConfig):
             config = AutoConfig.from_pretrained(pretrained_model_name_or_path, **kwargs)
-
-
-        if "bert-base-japanese" in pretrained_model_name_or_path:
-            return BertJapaneseTokenizer.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
 
         use_fast = kwargs.pop("use_fast", False)
         for config_class, (tokenizer_class_py, tokenizer_class_fast) in TOKENIZER_MAPPING.items():

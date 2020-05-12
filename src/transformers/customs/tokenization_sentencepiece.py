@@ -38,7 +38,6 @@ class SentencePieceTokenizer(PreTrainedTokenizer):
             bos_token=bos_token,
             **kwargs,
         )
-        self.max_len_single_sentence = self.max_len
         self.sampling = sampling
 
     def __len__(self):
@@ -125,3 +124,4 @@ class SentencePieceTokenizer(PreTrainedTokenizer):
     get_special_tokens_mask = RobertaTokenizer.get_special_tokens_mask
     create_token_type_ids_from_sequences = RobertaTokenizer.create_token_type_ids_from_sequences
     save_pretrained = RobertaTokenizer.save_pretrained
+    max_model_input_sizes = RobertaTokenizer.max_model_input_sizes

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, NewType, Tuple
+from typing import Any, Dict, List, NewType, Optional, Tuple, Union
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -95,20 +95,21 @@ class DataCollatorForLanguageModeling(DataCollator):
         else:
             return {"input_ids": batch, "labels": batch}
 
-    def _tensorize_batch(self, examples: List[torch.Tensor]) -> torch.Tensor:
+    def _tensorize_batch(self, examples: List[torch.Tensor], pad_value: Optional[int] = None) -> torch.Tensor:
         length_of_first = examples[0].size(0)
         are_tensors_same_length = all(x.size(0) == length_of_first for x in examples)
         if are_tensors_same_length:
             return torch.stack(examples, dim=0)
         else:
-            if self.tokenizer._pad_token is None:
+            if self.tokenizer._pad_token is None and pad_value is None:
                 raise ValueError(
                     "You are attempting to pad samples but the tokenizer you are using"
                     f" ({self.tokenizer.__class__.__name__}) does not have one."
                 )
-            return pad_sequence(examples, batch_first=True, padding_value=self.tokenizer.pad_token_id)
+            pad_val = pad_value if pad_value is not None else self.tokenizer.pad_token_id
+            return pad_sequence(examples, batch_first=True, padding_value=pad_val)
 
-    def mask_tokens(self, inputs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def mask_tokens(self, inputs: torch.Tensor, tokens_mask: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.
         """
@@ -117,7 +118,6 @@ class DataCollatorForLanguageModeling(DataCollator):
             raise ValueError(
                 "This tokenizer does not have a mask token which is necessary for masked language modeling. Remove the --mlm flag if you want to use this tokenizer."
             )
-
         labels = inputs.clone()
         # We sample a few tokens in each sequence for masked-LM training (with probability args.mlm_probability defaults to 0.15 in Bert/RoBERTa)
         probability_matrix = torch.full(labels.shape, self.mlm_probability)
@@ -125,6 +125,8 @@ class DataCollatorForLanguageModeling(DataCollator):
             self.tokenizer.get_special_tokens_mask(val, already_has_special_tokens=True) for val in labels.tolist()
         ]
         probability_matrix.masked_fill_(torch.tensor(special_tokens_mask, dtype=torch.bool), value=0.0)
+        if tokens_mask is not None:
+            probability_matrix.masked_fill(tokens_mask, value=0.0)
         if self.tokenizer._pad_token is not None:
             padding_mask = labels.eq(self.tokenizer.pad_token_id)
             probability_matrix.masked_fill_(padding_mask, value=0.0)

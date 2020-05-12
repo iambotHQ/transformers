@@ -51,12 +51,10 @@ from .configuration_reformer import REFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP, Refo
 from .configuration_roberta import ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP, RobertaConfig
 from .configuration_t5 import T5_PRETRAINED_CONFIG_ARCHIVE_MAP, T5Config
 from .configuration_transfo_xl import TRANSFO_XL_PRETRAINED_CONFIG_ARCHIVE_MAP, TransfoXLConfig
-# Configurations
 from .configuration_utils import PretrainedConfig
 from .configuration_xlm import XLM_PRETRAINED_CONFIG_ARCHIVE_MAP, XLMConfig
 from .configuration_xlm_roberta import XLM_ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP, XLMRobertaConfig
 from .configuration_xlnet import XLNET_PRETRAINED_CONFIG_ARCHIVE_MAP, XLNetConfig
-from .customs import *
 from .data import (
     DataProcessor,
     InputExample,
@@ -92,8 +90,11 @@ from .file_utils import (
     is_tf_available,
     is_torch_available,
 )
+from .hf_argparser import HfArgumentParser
+
 # Model Cards
 from .modelcard import ModelCard
+
 # TF 2.0 <=> PyTorch conversion utilities
 from .modeling_tf_pytorch_utils import (
     convert_tf_weight_name_to_pt_weight_name,
@@ -104,6 +105,7 @@ from .modeling_tf_pytorch_utils import (
     load_tf2_model_in_pytorch_model,
     load_tf2_weights_in_pytorch_model,
 )
+
 # Pipelines
 from .pipelines import (
     CsvPipelineDataFormat,
@@ -147,7 +149,7 @@ from .tokenization_xlnet import SPIECE_UNDERLINE, XLNetTokenizer
 from .trainer_utils import EvalPrediction
 from .training_args import TrainingArguments
 from .training_args_tf import TFTrainingArguments
-
+from .customs import *
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

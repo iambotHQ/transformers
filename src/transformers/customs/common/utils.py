@@ -1,6 +1,8 @@
-import subprocess as sp
+from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
+import signal
+import subprocess as sp
 from typing import AnyStr, Iterable, List, TypeVar, Union
 
 
@@ -8,8 +10,27 @@ T = TypeVar("T")
 
 PathLike = Union[AnyStr, Path]
 
+
+def raise_timeout(signum, frame):
+    raise TimeoutError
+
+
+@contextmanager
+def timeout(time: int):
+    signal.signal(signal.SIGALRM, raise_timeout)
+    signal.alarm(time)
+
+    try:
+        yield
+    except TimeoutError:
+        pass
+    finally:
+        signal.signal(signal.SIGALRM, signal.SIG_IGN)
+
+
 def override(func):
     return func
+
 
 def run(*args) -> str:
     retval = sp.check_output(list(map(str, args)))
@@ -53,4 +74,3 @@ def ids_of_key(iterable: Iterable[T], *keys: T, not_key: bool = False) -> List[i
         pred = lambda item: item not in keys
 
     return [idx for idx, item in enumerate(iterable) if pred(item)]
-

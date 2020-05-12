@@ -6,12 +6,14 @@ OUTPUT_DIR=service_models/vanilla/roberta-pl-misspelled
 DATA_FILE=$DATA_ROOT/all.txt
 MODEL_DIR=$OUTPUT_DIR/model
 TRAIN_SCRIPT=transformers/examples/iambot/train_lm.py
+LOGGING_DIR=$MODEL_DIR/logs/train
 
 if [[ ! -f $DATA_FILE ]]; then
     echo "Merging data"
     cat $DATA_ROOT/wiki.txt $DATA_ROOT/opensubs.txt >$DATA_FILE
 fi
 
+mkdir -vpv $LOGGING_DIR
 mkdir -vpv $OUTPUT_DIR
 
 if [[ ! -f $OUTPUT_DIR/sp.model ]]; then
@@ -44,9 +46,8 @@ if [[ $1 == 'eval' ]]; then
     CUDA_VISIBLE_DEVICES=0, python $TRAIN_SCRIPT \
         --output_dir $MODEL_DIR \
         --model_type roberta \
+        --model_name_or_path $OUTPUT_DIR \
         --mlm \
-        --config_name $OUTPUT_DIR \
-        --tokenizer_name $OUTPUT_DIR \
         --train_data_file $OUTPUT_DIR/train.txt \
         --eval_data_file $OUTPUT_DIR/eval.txt \
         --line_by_line \
@@ -61,19 +62,22 @@ elif [[ $1 == 'train' ]]; then
         python -m torch.distributed.launch --nproc_per_node=16 $TRAIN_SCRIPT \
             --output_dir $MODEL_DIR \
             --model_type roberta \
-            --mlm \
             --config_name $OUTPUT_DIR \
             --tokenizer_name $OUTPUT_DIR \
+            --logging_dir $LOGGING_DIR \
+            --mlm \
             --train_data_file $OUTPUT_DIR/train.txt \
             --eval_data_file $OUTPUT_DIR/eval.txt \
             --line_by_line \
             --save_steps 1000 \
+            --logging_steps 100 \
             --do_train \
             --num_train_epochs 15 \
             --per_gpu_train_batch_size 8 \
             --overwrite_output_dir \
-            --iambot \
+            --iambot_mode \
             --iambot_all_data $DATA_FILE \
+            --iambot_tokenizer_sampling \
             --iambot_transforms \
             --iambot_transform_ratio 0.25 \
             --iambot_misspell_prob 0.25 \

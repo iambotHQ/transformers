@@ -4,6 +4,7 @@ import os
 import random
 import re
 import shutil
+import math
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Union
@@ -126,6 +127,7 @@ class Trainer:
         prediction_loss_only=False,
         tb_writer: Optional["SummaryWriter"] = None,
         optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = None,
+        compute_perplexity: bool = False
     ):
         """
         Trainer is a simple but feature-complete training and eval loop for PyTorch,
@@ -166,6 +168,7 @@ class Trainer:
             # Set an xla_device flag on the model's config.
             # We'll find a more elegant and not need to do this in the future.
             self.model.config.xla_device = True
+        self.compute_perplexity = compute_perplexity
 
     def get_train_dataloader(self) -> DataLoader:
         if self.train_dataset is None:
@@ -425,6 +428,8 @@ class Trainer:
                             learning_rate_scalar = scheduler.get_last_lr()[0]
                             logs["learning_rate"] = learning_rate_scalar
                             logs["loss"] = loss_scalar
+                            if self.compute_perplexity:
+                                logs["perplexity"] = math.exp(loss_scalar)
                             logging_loss = tr_loss
 
                             if self.tb_writer:
