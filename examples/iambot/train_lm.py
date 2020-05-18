@@ -187,13 +187,13 @@ class IamBotArgs:
     iambot_force_train_tokenizer: bool = field(default=False, metadata=dict(help="Don't train tokenizer if already exists."))
     iambot_train_eval_ratio: float = field(default=0.05, metadata=dict(help="Split ratio of train and eval data."))
     iambot_force_split: bool = field(default=False, metadata=dict(help="Whether to force train/text split"))
-    iambot_save_every_epoch: bool = field(default=False, metadata=dict(help="Whether to do checkpoint every epoch"))
-    iambot_transform_ratio: float = field(default=0.2, metadata=dict(help="Ratio of transformed words in sentence"))
-    iambot_misspell_prob: float = field(default=0.25, metadata=dict(help="Probability of misspell"))
-    iambot_uppercase_prob: float = field(default=0.25, metadata=dict(help="Probability of uppercase"))
-    iambot_lowercase_prob: float = field(default=0.25, metadata=dict(help="Probability of lowercase"))
-    iambot_remove_char_prob: float = field(default=0.25, metadata=dict(help="Probability of remove char"))
-    iambot_unidecode_prob: float = field(default=0.50, metadata=dict(help="Probability of unidecode"))
+    # iambot_save_every_epoch: bool = field(default=False, metadata=dict(help="Whether to do checkpoint every epoch"))
+    iambot_transform_ratio: float = field(default=0.0, metadata=dict(help="Ratio of transformed words in sentence"))
+    iambot_misspell_prob: float = field(default=0.0, metadata=dict(help="Probability of misspell"))
+    iambot_uppercase_prob: float = field(default=0.0, metadata=dict(help="Probability of uppercase"))
+    iambot_lowercase_prob: float = field(default=0.0, metadata=dict(help="Probability of lowercase"))
+    iambot_remove_char_prob: float = field(default=0.0, metadata=dict(help="Probability of remove char"))
+    iambot_unidecode_prob: float = field(default=0.0, metadata=dict(help="Probability of unidecode"))
 
 
 class IamBotUtils:
@@ -213,7 +213,7 @@ class IamBotUtils:
     ) -> Tuple[PretrainedConfig, PreTrainedTokenizer]:
         logger.info("Creating SentencePieceTokenizer config")
         tokenizer_args: Dict[str, Union[str, bool]] = cls.tokenizers_special_tokens.copy()
-        tokenizer_args["sampling"] = iambot_args.iambot_tokenizer_sampling and not training_args.do_eval
+        tokenizer_args["sampling"] = iambot_args.iambot_tokenizer_sampling and training_args.do_train
 
         logger.info(f"Modyfing {config.model_type} config")
         for attr_name, attr_val in dict(
@@ -455,15 +455,16 @@ def main():
     if iambot_args.iambot_mode:
         IamBotUtils.create_iambot_config(config, tokenizer, training_args, model_args, iambot_args, data_args)
 
-    if model_args.model_name_or_path:
-        model = AutoModelWithLMHead.from_pretrained(
-            model_args.model_name_or_path, from_tf=bool(".ckpt" in model_args.model_name_or_path), config=config, cache_dir=model_args.cache_dir,
-        )
-    else:
-        logger.info("Training new model from scratch")
-        model = AutoModelWithLMHead.from_config(config)
+    if not training_args.do_eval_all:
+        if model_args.model_name_or_path:
+            model = AutoModelWithLMHead.from_pretrained(
+                model_args.model_name_or_path, from_tf=bool(".ckpt" in model_args.model_name_or_path), config=config, cache_dir=model_args.cache_dir,
+            )
+        else:
+            logger.info("Training new model from scratch")
+            model = AutoModelWithLMHead.from_config(config)
 
-    model.resize_token_embeddings(len(tokenizer))
+        model.resize_token_embeddings(len(tokenizer))
 
     if config.model_type in ["bert", "roberta", "distilbert", "camembert"] and not data_args.mlm:
         raise ValueError("BERT and RoBERTa-like models do not have LM heads but masked LM heads. They must be run using the --mlm " "flag (masked language modeling).")
@@ -477,23 +478,22 @@ def main():
     # Get datasets
     # TODO iambot split
     train_dataset = get_dataset(data_args, iambot_args, tokenizer=tokenizer, local_rank=training_args.local_rank) if training_args.do_train else None
-    eval_dataset = get_dataset(data_args, iambot_args, tokenizer=tokenizer, local_rank=training_args.local_rank, evaluate=True) if training_args.do_eval else None
+    eval_dataset = get_dataset(data_args, iambot_args, tokenizer=tokenizer, local_rank=training_args.local_rank, evaluate=True) if any((training_args.do_eval, training_args.do_eval_all)) else None
     data_collator_class = IamBotDataCollatorForLanguageModeling if iambot_args.iambot_mode else DataCollatorForLanguageModeling
     data_collator = data_collator_class(tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability)
 
-    # Initialize our Trainer
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        data_collator=data_collator,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-        prediction_loss_only=True,
-        compute_perplexity=True,
-    )
-
     # Training
     if training_args.do_train:
+        # Initialize our Trainer
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            data_collator=data_collator,
+            train_dataset=train_dataset,
+            eval_dataset=eval_dataset,
+            prediction_loss_only=True,
+            compute_perplexity=True,
+        )
         model_path = model_args.model_name_or_path if model_args.model_name_or_path is not None and os.path.isdir(model_args.model_name_or_path) else None
         trainer.train(model_path=model_path)
         trainer.save_model()
@@ -503,23 +503,47 @@ def main():
             tokenizer.save_pretrained(training_args.output_dir)
 
     # Evaluation
-    results = {}
-    if training_args.do_eval and training_args.local_rank in [-1, 0]:
-        logger.info("*** Evaluate ***")
+    if training_args.do_eval_all:
+        assert training_args.logging_dir
+        checkpoints: Dict[int, Path] = {int(str(path.name).split("-")[1]): path for path in Path(training_args.output_dir).glob("checkpoint-*")}
+        logger.debug(f"Found {len(checkpoints)} checkpoints")
 
-        eval_output = trainer.evaluate()
+        for global_step, checkpoint_path in tqdm(checkpoints.items(), "Evaulating"):
+            config = AutoConfig.from_pretrained(checkpoint_path, cache_dir=model_args.cache_dir)
+            model = AutoModelWithLMHead.from_pretrained(checkpoint_path, from_tf=bool(".ckpt" in str(checkpoint_path)), config=config, cache_dir=model_args.cache_dir)
+            training_args.logging_dir = str(Path(training_args.logging_dir).parent / "eval")
+            trainer = Trainer(
+                model=model,
+                args=training_args,
+                data_collator=data_collator,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                prediction_loss_only=True,
+                compute_perplexity=True,
+            )
+            eval_output = trainer.evaluate(eval_dataset)
 
-        perplexity = math.exp(eval_output["loss"])
-        result = {"perplexity": perplexity}
+            if trainer.tb_writer:
+                for key in eval_output:
+                    trainer.tb_writer.add_scalar(key, eval_output[key], global_step)
 
-        output_eval_file = os.path.join(training_args.output_dir, "eval_results_lm.txt")
-        with open(output_eval_file, "w") as writer:
-            logger.info("***** Eval results *****")
-            for key in sorted(result.keys()):
-                logger.info("  %s = %s", key, str(result[key]))
-                writer.write("%s = %s\n" % (key, str(result[key])))
+            if trainer.tb_writer:
+                trainer.tb_writer.close()
 
-        results.update(result)
+    else:
+        results = {}
+        if training_args.do_eval and training_args.local_rank in [-1, 0]:
+            logger.info("*** Evaluate ***")
+
+            result = trainer.evaluate()
+            output_eval_file = os.path.join(training_args.output_dir, "eval_results_lm.txt")
+            with open(output_eval_file, "w") as writer:
+                logger.info("***** Eval results *****")
+                for key in sorted(result.keys()):
+                    logger.info("  %s = %s", key, str(result[key]))
+                    writer.write("%s = %s\n" % (key, str(result[key])))
+
+            results.update(result)
 
     return results
 

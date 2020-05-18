@@ -47,16 +47,17 @@ if [[ $1 == 'eval' ]]; then
         --output_dir $MODEL_DIR \
         --model_type roberta \
         --model_name_or_path $OUTPUT_DIR \
+        --logging_dir $LOGGING_DIR \
         --mlm \
         --train_data_file $OUTPUT_DIR/train.txt \
         --eval_data_file $OUTPUT_DIR/eval.txt \
         --line_by_line \
-        --do_eval \
-        --eval_all_checkpoints \
+        --do_eval_all \
         --per_gpu_train_batch_size 8 \
         --per_gpu_eval_batch_size 12 \
-        --iambot \
-        --iambot_all_data $DATA_FILE
+        --iambot_mode \
+        --iambot_all_data $DATA_FILE \
+        --iambot_transforms
 elif [[ $1 == 'train' ]]; then
     if [[ $2 == 'misspelled' ]]; then
         python -m torch.distributed.launch --nproc_per_node=16 $TRAIN_SCRIPT \

@@ -669,5 +669,7 @@ class Trainer:
             metrics = {}
         if len(eval_losses) > 0:
             metrics["loss"] = np.mean(eval_losses)
+            if self.compute_perplexity:
+                metrics['perplexity'] = math.exp(metrics["loss"])
 
         return PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)

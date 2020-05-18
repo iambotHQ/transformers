@@ -112,6 +112,7 @@ class TrainingArguments:
         default=None, metadata={"help": "TPU: Number of TPU cores (automatically passed by launcher script)"}
     )
     tpu_metrics_debug: bool = field(default=False, metadata={"help": "TPU: Whether to print debug metrics"})
+    do_eval_all: bool = field(default=False, metadata={"help": "Do evalutation using all found checkpoints"})
 
     @property
     def train_batch_size(self) -> int:
