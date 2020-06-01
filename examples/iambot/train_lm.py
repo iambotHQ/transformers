@@ -478,7 +478,11 @@ def main():
     # Get datasets
     # TODO iambot split
     train_dataset = get_dataset(data_args, iambot_args, tokenizer=tokenizer, local_rank=training_args.local_rank) if training_args.do_train else None
-    eval_dataset = get_dataset(data_args, iambot_args, tokenizer=tokenizer, local_rank=training_args.local_rank, evaluate=True) if any((training_args.do_eval, training_args.do_eval_all)) else None
+    eval_dataset = (
+        get_dataset(data_args, iambot_args, tokenizer=tokenizer, local_rank=training_args.local_rank, evaluate=True)
+        if any((training_args.do_eval, training_args.do_eval_all))
+        else None
+    )
     data_collator_class = IamBotDataCollatorForLanguageModeling if iambot_args.iambot_mode else DataCollatorForLanguageModeling
     data_collator = data_collator_class(tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability)
 
@@ -545,7 +549,7 @@ def main():
 
             results.update(result)
 
-    return results
+        return results
 
 
 def _mp_fn(index):
