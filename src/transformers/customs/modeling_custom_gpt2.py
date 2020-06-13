@@ -1,9 +1,10 @@
 from pathlib import Path
-from transformers.customs import override
+
 from lm.inference import ModelWrapper
 from lm.model import OutputGetters
 
 from transformers.configuration_gpt2 import GPT2Config
+from transformers.customs import override
 from transformers.modeling_gpt2 import GPT2LMHeadModel
 
 
@@ -18,9 +19,7 @@ class CustomGPT2(GPT2LMHeadModel):
     @override
     @classmethod
     def from_pretrained(cls, path: Path, generation_mode: bool = False, *args, **kwargs):
-        model = ModelWrapper.load_encoder(
-            f"{path}/model.pt", True, True, "cpu", output_getter=OutputGetters.raw
-        )
+        model = ModelWrapper.load_encoder(f"{path}/model.pt", True, True, "cpu", output_getter=OutputGetters.raw)
         model.config = cls.config
         setattr(model.config, "generation_mode", True)
         setattr(model.config, "output_past", False)

@@ -62,6 +62,7 @@ from .data import (
     xnli_processors,
     xnli_tasks_num_labels,
 )
+
 # Files and general utilities
 from .file_utils import (
     CONFIG_NAME,
@@ -147,7 +148,6 @@ from .tokenization_xlnet import SPIECE_UNDERLINE, XLNetTokenizer
 from .trainer_utils import EvalPrediction
 from .training_args import TrainingArguments
 from .training_args_tf import TFTrainingArguments
-from .customs import *
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

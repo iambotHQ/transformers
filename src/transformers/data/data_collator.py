@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, NewType, Optional, Tuple, Union
+from typing import Any, Dict, List, NewType, Tuple, Optional
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -106,8 +106,8 @@ class DataCollatorForLanguageModeling(DataCollator):
                     "You are attempting to pad samples but the tokenizer you are using"
                     f" ({self.tokenizer.__class__.__name__}) does not have one."
                 )
-            pad_val = pad_value if pad_value is not None else self.tokenizer.pad_token_id
-            return pad_sequence(examples, batch_first=True, padding_value=pad_val)
+        pad_val = pad_value if pad_value is not None else self.tokenizer.pad_token_id
+        return pad_sequence(examples, batch_first=True, padding_value=pad_val)
 
     def mask_tokens(self, inputs: torch.Tensor, tokens_mask: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """

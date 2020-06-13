@@ -1,17 +1,20 @@
+import multiprocessing as mp
 import re
+import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from string import punctuation
-from typing import Iterable, List, Optional, Sequence, Union, TextIO, IO, List, Callable
+from typing import IO, Callable, Iterable, List, Optional, Sequence, TextIO, Union
 
 from fire import Fire
-from tqdm.auto import tqdm, trange
 from logzero import logger
-import multiprocessing as mp
-import time
+from tqdm.auto import tqdm, trange
+
 
 font_tags = re.compile(r"\{C:\$\w+\}")
-tags_to_remove = re.compile(r"(?:(?:tłumaczenie(?: i napisy)?)|(?:korekta)|(?:synchro)|(?:hatak)|(?:przedstawia napisy)|(?:napisy)|(?:kontakt))\s*\:?")
+tags_to_remove = re.compile(
+    r"(?:(?:tłumaczenie(?: i napisy)?)|(?:korekta)|(?:synchro)|(?:hatak)|(?:przedstawia napisy)|(?:napisy)|(?:kontakt))\s*\:?"
+)
 
 
 def worker(queue: mp.JoinableQueue, batch_lines_queue: mp.JoinableQueue, processing_func: Callable[[str], List[str]]):
@@ -30,7 +33,9 @@ def writer(path: Union[str, Path], batch_lines_queue: mp.JoinableQueue):
             lines = batch_lines_queue.get()
             if lines is None:
                 break
-            logger.warning(f"MP {mp.current_process().name} - left {batch_lines_queue.qsize()} batches, writing {len(lines)} lines")
+            logger.warning(
+                f"MP {mp.current_process().name} - left {batch_lines_queue.qsize()} batches, writing {len(lines)} lines"
+            )
             fhd.writelines(f"{line}\n" for line in lines)
             batch_lines_queue.task_done()
 
@@ -65,11 +70,15 @@ def main(root_dir: Union[str, Path], outfile: Union[str, Path]):
 
     processes: List[mp.Process] = []
     for i in range(mp.cpu_count() - 2):
-        worker_process = mp.Process(target=worker, args=(paths_queue, batch_lines_queue, parse), daemon=True, name=str(i))
+        worker_process = mp.Process(
+            target=worker, args=(paths_queue, batch_lines_queue, parse), daemon=True, name=str(i)
+        )
         worker_process.start()
         processes.append(worker_process)
 
-    writer_process: mp.Process = mp.Process(target=writer, args=(outfile, batch_lines_queue), daemon=True, name="Writer")
+    writer_process: mp.Process = mp.Process(
+        target=writer, args=(outfile, batch_lines_queue), daemon=True, name="Writer"
+    )
     writer_process.start()
 
     for path in Path(root_dir).rglob("*.xml"):
@@ -80,9 +89,10 @@ def main(root_dir: Union[str, Path], outfile: Union[str, Path]):
 
     for process in processes:
         process.join()
-        
+
     batch_lines_queue.put(None)
     writer_process.join()
+
 
 def fire_main():
     Fire(main)

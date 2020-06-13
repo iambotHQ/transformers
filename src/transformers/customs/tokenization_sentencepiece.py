@@ -1,13 +1,12 @@
 from pathlib import Path
-from typing import List, Sequence, Union
-from sentencepiece import SentencePieceProcessor
+from typing import Any, Dict, List, Sequence, Union
+
 import torch
-from typing import Any, Dict
-from transformers.tokenization_utils import PreTrainedTokenizer
+from logzero import logger
+from sentencepiece import SentencePieceProcessor
 
 from transformers.tokenization_roberta import RobertaTokenizer
-
-from logzero import logger
+from transformers.tokenization_utils import PreTrainedTokenizer
 
 
 class SentencePieceTokenizer(PreTrainedTokenizer):
@@ -71,12 +70,18 @@ class SentencePieceTokenizer(PreTrainedTokenizer):
     def _convert_id_to_token(self, index: int) -> str:
         return self.sp.id_to_piece(index)
 
-    def convert_ids_to_tokens(self, ids: Union[torch.Tensor, Sequence[int], int], skip_special_tokens: bool = False,) -> List[str]:
+    def convert_ids_to_tokens(
+        self, ids: Union[torch.Tensor, Sequence[int], int], skip_special_tokens: bool = False,
+    ) -> List[str]:
         if isinstance(ids, int):
             return self._convert_id_to_token(ids)
         elif torch.is_tensor(ids):
             ids = ids.tolist()
-        return [self._convert_id_to_token(index) for index in ids if not (skip_special_tokens and index in self.all_special_ids)]
+        return [
+            self._convert_id_to_token(index)
+            for index in ids
+            if not (skip_special_tokens and index in self.all_special_ids)
+        ]
 
     def _tokenize(self, text: str, add_prefix_space: bool = False) -> List[str]:  # type: ignore
         if add_prefix_space:
@@ -107,7 +112,9 @@ class SentencePieceTokenizer(PreTrainedTokenizer):
 
         normalized_token = token.replace(self.eos_token, "\n").replace(self.eot_token, "\n").replace("▁", " ")
 
-        if (len(normalized_token) > 1 and normalized_token[1] in ending_puncts) or (len(tokens) > 1 and tokens[-2].replace("▁", "") in starting_puncts):
+        if (len(normalized_token) > 1 and normalized_token[1] in ending_puncts) or (
+            len(tokens) > 1 and tokens[-2].replace("▁", "") in starting_puncts
+        ):
             normalized_token = normalized_token.replace(" ", "")
 
         if print_token:

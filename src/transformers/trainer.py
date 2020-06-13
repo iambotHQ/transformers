@@ -180,7 +180,7 @@ class Trainer:
         prediction_loss_only=False,
         tb_writer: Optional["SummaryWriter"] = None,
         optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = None,
-        compute_perplexity: bool = False
+        compute_perplexity: bool = False,
     ):
         """
         Trainer is a simple but feature-complete training and eval loop for PyTorch,
@@ -559,6 +559,10 @@ class Trainer:
     def _log(self, logs: Dict[str, float], iterator: Optional[tqdm] = None) -> None:
         if self.epoch is not None:
             logs["epoch"] = self.epoch
+            
+        if self.compute_perplexity:
+            logs['perplexity'] = math.exp(logs['loss'])
+
         if self.tb_writer:
             for k, v in logs.items():
                 if isinstance(v, (int, float)):

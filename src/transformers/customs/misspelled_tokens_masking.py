@@ -113,20 +113,14 @@ class MisspellTransform(BaseMisspellTransform):
         misspelled_masked_tokens = np.array(
             list(
                 itertools.chain.from_iterable(
-                    [part]
-                    if part in self.tokenizer.special_tokens_map.values()
-                    else self.tokenizer.tokenize(part)
+                    [part] if part in self.tokenizer.special_tokens_map.values() else self.tokenizer.tokenize(part)
                     for part in decoded_parts
                 )
             )
         )
 
-        misspelled_masked_tokens_mask_ids = np.where(
-            misspelled_masked_tokens == self.tokenizer.mask_token
-        )[0]
-        misspelled_masked_tokens_ids = np.array(
-            self.tokenizer.convert_tokens_to_ids(*misspelled_masked_tokens)
-        )
+        misspelled_masked_tokens_mask_ids = np.where(misspelled_masked_tokens == self.tokenizer.mask_token)[0]
+        misspelled_masked_tokens_ids = np.array(self.tokenizer.convert_tokens_to_ids(*misspelled_masked_tokens))
 
         return dict(
             **sample,
@@ -140,8 +134,7 @@ class LabelCreatorTransform(BaseMisspellTransform):
     def __call__(self, sample: Dict[str, np.ndarray]):
         labels = np.full(len(sample["misspelled_masked_tokens"]), -100, dtype=np.int)
         labels[sample["misspelled_masked_tokens_mask_ids"]] = [
-            self.tokenizer.convert_tokens_to_ids(token)
-            for token in sample["tokens"][sample["mask"]]
+            self.tokenizer.convert_tokens_to_ids(token) for token in sample["tokens"][sample["mask"]]
         ]
         return dict(**sample, labels=labels)
 

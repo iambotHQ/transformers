@@ -22,7 +22,6 @@ import os
 import warnings
 
 import torch
-import torch.nn.functional as F
 from torch import nn
 from torch.nn import CrossEntropyLoss, MSELoss
 
@@ -542,6 +541,7 @@ class BertPreTrainedModel(PreTrainedModel):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+        from transformers.customs.utils import ConcatAvgMaxPooler
         model = super().from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
         pooler_name = kwargs.get("pooler", None)
         if pooler_name:
@@ -640,6 +640,7 @@ class BertModel(BertPreTrainedModel):
         self.embeddings = BertEmbeddings(config)
         self.encoder = BertEncoder(config)
         self.pooler = BertPooler(config)
+
         self.init_weights()
 
     def get_input_embeddings(self):
@@ -1308,7 +1309,6 @@ class BertForSequenceClassification(BertPreTrainedModel):
         if pooler_name and pooler_name.lower().startswith("concat"):
             model.classifier = nn.Linear(model.config.hidden_size * 2, model.config.num_labels)
         return model
-
 
 @add_start_docstrings(
     """Bert Model with a multiple choice classification head on top (a linear layer on top of

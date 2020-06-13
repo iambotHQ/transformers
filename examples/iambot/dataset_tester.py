@@ -10,14 +10,11 @@ from itertools import chain
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Tuple, Union, cast
 
-import ipdb
 import numpy as np
-import pandas as pd
 import torch
 import torch.multiprocessing
 from fire import Fire
 from logzero import logger, loglevel
-from mem_top import mem_top
 from misspell import make_typo
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset, RandomSampler
@@ -25,6 +22,9 @@ from tqdm import trange
 from tqdm.auto import tqdm
 from unidecode import unidecode
 
+import ipdb
+import pandas as pd
+from mem_top import mem_top
 from pympler.tracker import SummaryTracker
 from train_lm import IamBotLineByLineTextDataset
 from transformers import PreTrainedTokenizer
@@ -34,7 +34,14 @@ from transformers.customs import SentencePieceTokenizer, wc
 loglevel(logging.INFO)
 
 special_tokens: Dict[str, str] = dict(
-    unk_token="<unk>", eot_token="<eot>", sep_token="</s>", cls_token="<s>", mask_token="<mask>", pad_token="<pad>", eos_token="<eos>", bos_token="<bos>",
+    unk_token="<unk>",
+    eot_token="<eot>",
+    sep_token="</s>",
+    cls_token="<s>",
+    mask_token="<mask>",
+    pad_token="<pad>",
+    eos_token="<eos>",
+    bos_token="<bos>",
 )
 
 
@@ -100,7 +107,6 @@ def test_dataloader(
 
         dataset: Dataset = IamBotLineByLineTextDataset(tokenizer, args, None, transforms=transforms, lines=lines)
 
-
         for _ in trange(repeats, desc="Repeat"):
             dataloader: DataLoader = create_dataloader(
                 tokenizer,
@@ -116,13 +122,21 @@ def test_dataloader(
                 if transforms:
                     if use_cuda:
                         batch[0].cuda(), masks[0].cuda()
-                    assert batch[0].shape[0] <= batch_size and batch[0].shape[1] < block_size, (batch[0].shape, batch[1].shape)
-                    assert batch[1].shape[0] <= batch_size and batch[1].shape[1] < block_size, (batch[0].shape, batch[1].shape)
+                    assert batch[0].shape[0] <= batch_size and batch[0].shape[1] < block_size, (
+                        batch[0].shape,
+                        batch[1].shape,
+                    )
+                    assert batch[1].shape[0] <= batch_size and batch[1].shape[1] < block_size, (
+                        batch[0].shape,
+                        batch[1].shape,
+                    )
                 else:
                     if use_cuda:
                         batch.cuda()
                     assert batch.shape[0] <= batch_size and batch.shape[1] < block_size, batch.shape
-                import ipdb; ipdb.set_trace()
+                import ipdb
+
+                ipdb.set_trace()
         if last_one:
             break
 
@@ -140,7 +154,9 @@ def main_test(
     **kwargs: Any,
 ) -> None:
     logger.info(f"Loading tokenizer from {tokenizer_path}")
-    tokenizer: PreTrainedTokenizer = SentencePieceTokenizer.from_pretrained(tokenizer_path, **special_tokens, max_len=block_size, sampling=sampling)
+    tokenizer: PreTrainedTokenizer = SentencePieceTokenizer.from_pretrained(
+        tokenizer_path, **special_tokens, max_len=block_size, sampling=sampling
+    )
     line_gen: Iterable[str] = IamBotLineByLineTextDataset._read_lines(dataset_path)
     test_dataloader(tokenizer, transforms, kwargs, block_size, line_gen, max_lines, batch_size, use_cuda, repeats)
 

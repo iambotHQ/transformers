@@ -45,7 +45,10 @@ import shutil
 from pathlib import Path
 
 from setuptools import find_packages, setup
+import sys
 
+py_short_version: str = f"{sys.version_info.major}{sys.version_info.minor}"
+print(f"Python version: {py_short_version}")
 
 # Remove stale transformers.egg-info directory to avoid https://github.com/pypa/pip/issues/5466
 stale_egg_info = Path(__file__).parent / "transformers.egg-info"
@@ -64,6 +67,13 @@ if stale_egg_info.exists():
 
 
 extras = {}
+
+iambot_deps = [
+    "misspell",
+    "allennlp",
+    "fire",
+    "logzero",
+]
 
 extras["mecab"] = ["mecab-python3"]
 extras["sklearn"] = ["scikit-learn"]
@@ -108,7 +118,7 @@ setup(
     packages=find_packages("src"),
     install_requires=[
         "numpy",
-        "tokenizers",
+        "tokenizers == 0.7.0",
         # dataclasses for Python versions that don't have it
         "dataclasses;python_version<'3.7'",
         # utilities from PyPA to e.g. compare versions
@@ -125,9 +135,11 @@ setup(
         "sentencepiece",
         # for XLM
         "sacremoses",
-        # for typos
-        "misspell",
-        "allennlp"
+        *iambot_deps,
+    ],
+    dependency_links=[
+        "git+https://github.com/iambotHQ/transformer-lm@acd4cbf",
+        f"torch-scatter @ https://pytorch-geometric.com/whl/torch-1.5.0/torch_scatter-latest%2Bcu102-cp{py_short_version}-cp{py_short_version}m-linux_x86_64.whl",
     ],
     extras_require=extras,
     entry_points={

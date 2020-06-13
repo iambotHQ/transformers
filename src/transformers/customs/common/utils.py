@@ -1,8 +1,8 @@
+import signal
+import subprocess as sp
 from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
-import signal
-import subprocess as sp
 from typing import AnyStr, Iterable, List, TypeVar, Union
 
 

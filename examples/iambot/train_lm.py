@@ -34,6 +34,7 @@ from transformers.configuration_utils import PretrainedConfig
 from transformers.customs import timeout, wc
 from transformers.trainer import torch_distributed_zero_first
 
+
 try:
     from torch.utils.tensorboard import SummaryWriter
 except ImportError:
@@ -43,7 +44,9 @@ MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
 
-def mp_tokenize_worker(tokenizer_creator: Callable[..., PreTrainedTokenizer], args, tokenized_lines_queue: mp.Queue, lines_queue: mp.Queue):
+def mp_tokenize_worker(
+    tokenizer_creator: Callable[..., PreTrainedTokenizer], args, tokenized_lines_queue: mp.Queue, lines_queue: mp.Queue
+):
     # TODO
     tokenizer: PreTrainedTokenizer = tokenizer_creator()
     while True:
@@ -111,17 +114,31 @@ def iambot_train_eval(args, local_rank: int, tokenizer: PreTrainedTokenizer) -> 
                         fhd.write(f"{line}\n")
 
             with open(args.iambot_all_data, "r") as fhd:
-                lines = [line for line in (line.strip() for line in tqdm(fhd, f"Loading lines from {args.iambot_all_data}", wc(args.iambot_all_data),)) if line]
+                lines = [
+                    line
+                    for line in (
+                        line.strip()
+                        for line in tqdm(fhd, f"Loading lines from {args.iambot_all_data}", wc(args.iambot_all_data),)
+                    )
+                    if line
+                ]
 
             all_tokens: List[str] = mp_tokenize(lines, args)
             train_data: Iterable[str] = (
                 tokenizer.convert_tokens_to_string(all_tokens[i : i + args.block_size - 2], skip_special_tokens=True)
-                for i in trange(0, len(all_tokens) - no_eval_tokens, args.block_size - 2, desc="Creating training examples",)
+                for i in trange(
+                    0, len(all_tokens) - no_eval_tokens, args.block_size - 2, desc="Creating training examples",
+                )
             )
 
             eval_data: Iterable[str] = (
                 tokenizer.convert_tokens_to_string(all_tokens[i : i + args.block_size - 2], skip_special_tokens=True)
-                for i in trange(len(all_tokens) - no_eval_tokens, len(all_tokens) - args.block_size - 2, args.block_size - 2, desc="Creating eval examples",)
+                for i in trange(
+                    len(all_tokens) - no_eval_tokens,
+                    len(all_tokens) - args.block_size - 2,
+                    args.block_size - 2,
+                    desc="Creating eval examples",
+                )
             )
 
             save_lines(train_data, args.train_data_file)
@@ -135,14 +152,24 @@ class ModelArguments:
     """
 
     model_name_or_path: Optional[str] = field(
-        default=None, metadata={"help": "The model checkpoint for weights initialization. Leave None if you want to train a model from scratch."},
+        default=None,
+        metadata={
+            "help": "The model checkpoint for weights initialization. Leave None if you want to train a model from scratch."
+        },
     )
     model_type: Optional[str] = field(
-        default=None, metadata={"help": "If training from scratch, pass a model type from the list: " + ", ".join(MODEL_TYPES)},
+        default=None,
+        metadata={"help": "If training from scratch, pass a model type from the list: " + ", ".join(MODEL_TYPES)},
     )
-    config_name: Optional[str] = field(default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"})
-    tokenizer_name: Optional[str] = field(default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"})
-    cache_dir: Optional[str] = field(default=None, metadata={"help": "Where do you want to store the pretrained models downloaded from s3"})
+    config_name: Optional[str] = field(
+        default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
+    )
+    tokenizer_name: Optional[str] = field(
+        default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
+    )
+    cache_dir: Optional[str] = field(
+        default=None, metadata={"help": "Where do you want to store the pretrained models downloaded from s3"}
+    )
 
 
 @dataclass
@@ -151,16 +178,24 @@ class DataTrainingArguments:
     Arguments pertaining to what data we are going to input our model for training and eval.
     """
 
-    train_data_file: Optional[str] = field(default=None, metadata={"help": "The input training data file (a text file)."})
+    train_data_file: Optional[str] = field(
+        default=None, metadata={"help": "The input training data file (a text file)."}
+    )
     eval_data_file: Optional[str] = field(
-        default=None, metadata={"help": "An optional input evaluation data file to evaluate the perplexity on (a text file)."},
+        default=None,
+        metadata={"help": "An optional input evaluation data file to evaluate the perplexity on (a text file)."},
     )
     line_by_line: bool = field(
-        default=False, metadata={"help": "Whether distinct lines of text in the dataset are to be handled as distinct sequences."},
+        default=False,
+        metadata={"help": "Whether distinct lines of text in the dataset are to be handled as distinct sequences."},
     )
 
-    mlm: bool = field(default=False, metadata={"help": "Train with masked-language modeling loss instead of language modeling."})
-    mlm_probability: float = field(default=0.15, metadata={"help": "Ratio of tokens to mask for masked language modeling loss"})
+    mlm: bool = field(
+        default=False, metadata={"help": "Train with masked-language modeling loss instead of language modeling."}
+    )
+    mlm_probability: float = field(
+        default=0.15, metadata={"help": "Ratio of tokens to mask for masked language modeling loss"}
+    )
 
     block_size: int = field(
         default=-1,
@@ -170,7 +205,9 @@ class DataTrainingArguments:
             "Default to the model max input length for single sentence inputs (take into account special tokens)."
         },
     )
-    overwrite_cache: bool = field(default=False, metadata={"help": "Overwrite the cached training and evaluation sets"})
+    overwrite_cache: bool = field(
+        default=False, metadata={"help": "Overwrite the cached training and evaluation sets"}
+    )
 
 
 @dataclass
@@ -182,9 +219,13 @@ class IamBotArgs:
     iambot_mode: bool = field(default=False, metadata=dict(help="Enable IamBot mode"))
     iambot_tokenizer_sampling: bool = field(default=False, metadata=dict(help="Use tokenizer tokens sampling mode"))
     iambot_transforms: bool = field(default=False, metadata=dict(help="Train misspelled LM"))
-    iambot_all_data: Optional[str] = field(default=None, metadata=dict(help="All data needed to train tokenizer and model"))
+    iambot_all_data: Optional[str] = field(
+        default=None, metadata=dict(help="All data needed to train tokenizer and model")
+    )
     iambot_vocab_size: int = field(default=20000, metadata=dict(help="Tokenizer vocab size"))
-    iambot_force_train_tokenizer: bool = field(default=False, metadata=dict(help="Don't train tokenizer if already exists."))
+    iambot_force_train_tokenizer: bool = field(
+        default=False, metadata=dict(help="Don't train tokenizer if already exists.")
+    )
     iambot_train_eval_ratio: float = field(default=0.05, metadata=dict(help="Split ratio of train and eval data."))
     iambot_force_split: bool = field(default=False, metadata=dict(help="Whether to force train/text split"))
     # iambot_save_every_epoch: bool = field(default=False, metadata=dict(help="Whether to do checkpoint every epoch"))
@@ -198,7 +239,14 @@ class IamBotArgs:
 
 class IamBotUtils:
     tokenizers_special_tokens: Dict[str, Union[str, bool]] = dict(
-        unk_token="<unk>", eot_token="<eot>", sep_token="</s>", cls_token="<s>", mask_token="<mask>", pad_token="<pad>", eos_token="<eos>", bos_token="<bos>",
+        unk_token="<unk>",
+        eot_token="<eot>",
+        sep_token="</s>",
+        cls_token="<s>",
+        mask_token="<mask>",
+        pad_token="<pad>",
+        eos_token="<eos>",
+        bos_token="<bos>",
     )
 
     @classmethod
@@ -269,7 +317,13 @@ class IamBotLineByLineTextDataset(Dataset):
     @classmethod
     def _read_lines(cls, file_path: Path) -> Iterable[str]:
         with open(file_path, "r") as fhd:
-            yield from (line for line in (line.strip() for line in tqdm(fhd, f"Reading lines from {file_path}", total=wc(file_path))) if line)
+            yield from (
+                line
+                for line in (
+                    line.strip() for line in tqdm(fhd, f"Reading lines from {file_path}", total=wc(file_path))
+                )
+                if line
+            )
 
     def __len__(self) -> int:
         return len(self.examples)
@@ -315,13 +369,17 @@ class IamBotLineByLineTextDataset(Dataset):
         # tokenize text
         tokens: List[str] = self.tokenizer.tokenize(text)
         # choose ids of tokens to be transformed
-        tokens_ids_to_transform: List[int] = sorted(random.sample(range(len(tokens)), int(self.args.iambot_transform_ratio * len(tokens))))
+        tokens_ids_to_transform: List[int] = sorted(
+            random.sample(range(len(tokens)), int(self.args.iambot_transform_ratio * len(tokens)))
+        )
         # extract tokens to be transformed
         tokens_to_transform: List[str] = [tokens[idx] for idx in tokens_ids_to_transform]
         # transform chosen tokens
         transformed_tokens: List[str] = [self.transform(token) for token in tokens_to_transform]
         # try to convert transformed tokens to ids
-        transformed_tokens_ids: List[int] = [self.tokenizer._convert_token_to_id(token) for token in transformed_tokens]
+        transformed_tokens_ids: List[int] = [
+            self.tokenizer._convert_token_to_id(token) for token in transformed_tokens
+        ]
         # tokenize transformed tokens if they're not valid
         tokenized_transformed_tokens: List[Union[List[str], str]] = [
             self.tokenizer.tokenize(token) if token_id == self.tokenizer.unk_token_id else [token]
@@ -343,7 +401,10 @@ class IamBotLineByLineTextDataset(Dataset):
                     for idx in range(len(tokens))
                     for tok, mask in zip(
                         *(
-                            (tokenized_transformed_tokens[tokens_ids_to_transform.index(idx)], masks[tokens_ids_to_transform.index(idx)])
+                            (
+                                tokenized_transformed_tokens[tokens_ids_to_transform.index(idx)],
+                                masks[tokens_ids_to_transform.index(idx)],
+                            )
                             if idx in tokens_ids_to_transform
                             else ([tokens[idx]], [False])
                         )
@@ -353,7 +414,9 @@ class IamBotLineByLineTextDataset(Dataset):
         )
 
         # build inputs for model
-        final_tokens = self.tokenizer.build_inputs_with_special_tokens(self.tokenizer.convert_tokens_to_ids(final_tokens)[: self._input_length])
+        final_tokens = self.tokenizer.build_inputs_with_special_tokens(
+            self.tokenizer.convert_tokens_to_ids(final_tokens)[: self._input_length]
+        )
         # create final mask of maskable tokens
         final_mask = [True] + list(final_mask[: self._input_length]) + [True]
 
@@ -369,14 +432,26 @@ class IamBotLineByLineTextDataset(Dataset):
         return self._features_creator(self.examples[idx])
 
 
-def get_dataset(args: DataTrainingArguments, iambot_args: IamBotArgs, tokenizer: PreTrainedTokenizer, evaluate=False, local_rank=-1):
+def get_dataset(
+    args: DataTrainingArguments, iambot_args: IamBotArgs, tokenizer: PreTrainedTokenizer, evaluate=False, local_rank=-1
+):
     file_path = args.eval_data_file if evaluate else args.train_data_file
     if args.line_by_line:
         if iambot_args.iambot_mode:
-            return IamBotLineByLineTextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size, local_rank=local_rank, args=iambot_args)
-        return LineByLineTextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size, local_rank=local_rank)
+            return IamBotLineByLineTextDataset(
+                tokenizer=tokenizer,
+                file_path=file_path,
+                block_size=args.block_size,
+                local_rank=local_rank,
+                args=iambot_args,
+            )
+        return LineByLineTextDataset(
+            tokenizer=tokenizer, file_path=file_path, block_size=args.block_size, local_rank=local_rank
+        )
     else:
-        return TextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size, local_rank=local_rank,)
+        return TextDataset(
+            tokenizer=tokenizer, file_path=file_path, block_size=args.block_size, local_rank=local_rank,
+        )
 
 
 @dataclass
@@ -404,10 +479,20 @@ def main():
     model_args, data_args, training_args, iambot_args = parser.parse_args_into_dataclasses()
 
     if data_args.eval_data_file is None and training_args.do_eval:
-        raise ValueError("Cannot do evaluation without an evaluation data file. Either supply a file to --eval_data_file " "or remove the --do_eval argument.")
+        raise ValueError(
+            "Cannot do evaluation without an evaluation data file. Either supply a file to --eval_data_file "
+            "or remove the --do_eval argument."
+        )
 
-    if os.path.exists(training_args.output_dir) and os.listdir(training_args.output_dir) and training_args.do_train and not training_args.overwrite_output_dir:
-        raise ValueError(f"Output directory ({training_args.output_dir}) already exists and is not empty. Use --overwrite_output_dir to overcome.")
+    if (
+        os.path.exists(training_args.output_dir)
+        and os.listdir(training_args.output_dir)
+        and training_args.do_train
+        and not training_args.overwrite_output_dir
+    ):
+        raise ValueError(
+            f"Output directory ({training_args.output_dir}) already exists and is not empty. Use --overwrite_output_dir to overcome."
+        )
 
     # Setup logging
     logging.basicConfig(
@@ -458,7 +543,10 @@ def main():
     if not training_args.do_eval_all:
         if model_args.model_name_or_path:
             model = AutoModelWithLMHead.from_pretrained(
-                model_args.model_name_or_path, from_tf=bool(".ckpt" in model_args.model_name_or_path), config=config, cache_dir=model_args.cache_dir,
+                model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=config,
+                cache_dir=model_args.cache_dir,
             )
         else:
             logger.info("Training new model from scratch")
@@ -467,7 +555,10 @@ def main():
         model.resize_token_embeddings(len(tokenizer))
 
     if config.model_type in ["bert", "roberta", "distilbert", "camembert"] and not data_args.mlm:
-        raise ValueError("BERT and RoBERTa-like models do not have LM heads but masked LM heads. They must be run using the --mlm " "flag (masked language modeling).")
+        raise ValueError(
+            "BERT and RoBERTa-like models do not have LM heads but masked LM heads. They must be run using the --mlm "
+            "flag (masked language modeling)."
+        )
 
     if data_args.block_size <= 0:
         data_args.block_size = tokenizer.max_len
@@ -477,14 +568,22 @@ def main():
 
     # Get datasets
     # TODO iambot split
-    train_dataset = get_dataset(data_args, iambot_args, tokenizer=tokenizer, local_rank=training_args.local_rank) if training_args.do_train else None
+    train_dataset = (
+        get_dataset(data_args, iambot_args, tokenizer=tokenizer, local_rank=training_args.local_rank)
+        if training_args.do_train
+        else None
+    )
     eval_dataset = (
         get_dataset(data_args, iambot_args, tokenizer=tokenizer, local_rank=training_args.local_rank, evaluate=True)
         if any((training_args.do_eval, training_args.do_eval_all))
         else None
     )
-    data_collator_class = IamBotDataCollatorForLanguageModeling if iambot_args.iambot_mode else DataCollatorForLanguageModeling
-    data_collator = data_collator_class(tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability)
+    data_collator_class = (
+        IamBotDataCollatorForLanguageModeling if iambot_args.iambot_mode else DataCollatorForLanguageModeling
+    )
+    data_collator = data_collator_class(
+        tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
+    )
 
     # Training
     if training_args.do_train:
@@ -498,7 +597,11 @@ def main():
             prediction_loss_only=True,
             compute_perplexity=True,
         )
-        model_path = model_args.model_name_or_path if model_args.model_name_or_path is not None and os.path.isdir(model_args.model_name_or_path) else None
+        model_path = (
+            model_args.model_name_or_path
+            if model_args.model_name_or_path is not None and os.path.isdir(model_args.model_name_or_path)
+            else None
+        )
         trainer.train(model_path=model_path)
         trainer.save_model()
         # For convenience, we also re-save the tokenizer to the same directory,
@@ -509,12 +612,19 @@ def main():
     # Evaluation
     if training_args.do_eval_all:
         assert training_args.logging_dir
-        checkpoints: Dict[int, Path] = {int(str(path.name).split("-")[1]): path for path in Path(training_args.output_dir).glob("checkpoint-*")}
+        checkpoints: Dict[int, Path] = {
+            int(str(path.name).split("-")[1]): path for path in Path(training_args.output_dir).glob("checkpoint-*")
+        }
         logger.debug(f"Found {len(checkpoints)} checkpoints")
 
         for global_step, checkpoint_path in tqdm(checkpoints.items(), "Evaulating"):
             config = AutoConfig.from_pretrained(checkpoint_path, cache_dir=model_args.cache_dir)
-            model = AutoModelWithLMHead.from_pretrained(checkpoint_path, from_tf=bool(".ckpt" in str(checkpoint_path)), config=config, cache_dir=model_args.cache_dir)
+            model = AutoModelWithLMHead.from_pretrained(
+                checkpoint_path,
+                from_tf=bool(".ckpt" in str(checkpoint_path)),
+                config=config,
+                cache_dir=model_args.cache_dir,
+            )
             training_args.logging_dir = str(Path(training_args.logging_dir).parent / "eval")
             trainer = Trainer(
                 model=model,

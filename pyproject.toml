@@ -46,30 +46,24 @@ numpy = '^1.18.4'
 tokenizers = '^0.7.0'
 regex = '!=2019.12.17'
 allennlp = '^0.9.0'
+logzero = '^1.5.0'
+fire = "^0.3.1"
+
+[tool.poetry.dependencies.lm]
+git = 'https://github.com/iambotHQ/transformer-lm'
+rev = 'acd4cbf'
+
+# [tool.poetry.dependencies.torch-scatter]
+# url = 'https://pytorch-geometric.com/whl/torch-1.5.0/torch_scatter-latest%2Bcu102-cp37-cp37-linux_x86_64.whl'
 
 [tool.poetry.dev-dependencies]
 pylint = '^2.4.4'
 mypy = '^0.770'
-
-[tool.poetry.dev-dependencies.black]
-version = '^19.10b0'
-allow-prereleases = true
-
-[tool.poetry.dev-dependencies.rope]
-version = '^0.16.0'
-allow-prereleases = true
-
-[tool.poetry.dev-dependencies.ipdb]
-version = '^0.12.3'
-allow-prereleases = true
-
-[tool.poetry.dev-dependencies.isort]
-version = '^4.3.21'
-allow-prereleases = true
-
-[tool.poetry.dev-dependencies.flake8]
-version = '^3.7.9'
-allow-prereleases = true
+black = "^19.10b0"
+rope = "^0.17.0"
+ipdb = "^0.13.2"
+isort = "^4.3.21"
+flake8 = "^3.8.3"
 
 [tool.isort]
 ensure_newline_before_comments = true

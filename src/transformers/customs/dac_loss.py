@@ -3,7 +3,7 @@ from typing import Any, Optional
 import torch
 from logzero import logger
 from overrides import overrides
-from torch.nn.modules.loss import _Loss, NLLLoss, CrossEntropyLoss
+from torch.nn.modules.loss import CrossEntropyLoss, NLLLoss, _Loss
 
 
 class DACLoss(_Loss):
@@ -46,4 +46,3 @@ class DACLoss(_Loss):
 
     def _auto_tune(self) -> None:
         raise NotImplementedError
-

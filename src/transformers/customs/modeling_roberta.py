@@ -16,14 +16,9 @@ from torch.nn import CrossEntropyLoss, MSELoss
 from transformers.configuration_roberta import RobertaConfig
 from transformers.customs.label_smoothing_loss import LabelSmoothingLoss
 from transformers.file_utils import add_start_docstrings
-from transformers.modeling_bert import (
-    BertEmbeddings,
-    BertLayerNorm,
-    BertModel,
-    BertPreTrainedModel,
-    gelu,
-)
+from transformers.modeling_bert import BertEmbeddings, BertLayerNorm, BertModel, BertPreTrainedModel, gelu
 from transformers.modeling_roberta import RobertaModel
+
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +46,24 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
         self.loss_function = partial(loss_function_type, **loss_function_kwargs)
 
     def forward(
-        self, input_ids=None, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None, inputs_embeds=None, labels=None, hidden=None,
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        hidden=None,
     ):
-        outputs = self.roberta(input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids, position_ids=position_ids, head_mask=head_mask, inputs_embeds=inputs_embeds,)
+        outputs = self.roberta(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+        )
         if self.config.concat_last_n_hiddens == 1:
             sequence_output = outputs[0]
         else:
@@ -108,8 +118,14 @@ class RobertaClassificationHeadBiLstm(nn.Module):
     @classmethod
     def init_hidden(cls, hidden_size: int, num_layers: int, batch_size: int, bidir: bool = True):
         return (
-            Variable(torch.zeros(cls.dir_num * num_layers, batch_size, hidden_size).type(torch.FloatTensor), requires_grad=True,),
-            Variable(torch.zeros(cls.dir_num * num_layers, batch_size, hidden_size).type(torch.FloatTensor), requires_grad=True,),
+            Variable(
+                torch.zeros(cls.dir_num * num_layers, batch_size, hidden_size).type(torch.FloatTensor),
+                requires_grad=True,
+            ),
+            Variable(
+                torch.zeros(cls.dir_num * num_layers, batch_size, hidden_size).type(torch.FloatTensor),
+                requires_grad=True,
+            ),
         )
 
     def forward(self, input, hidden, **kwargs):
@@ -124,19 +140,35 @@ class BCN(nn.Module):
 
         # Pre-encode feed-forward
         self._embedding_dropout = nn.Dropout(0.25)
-        self._pre_encode_feedforward = FeedForward(input_dim=config.hidden_size, num_layers=1, hidden_dims=[300], activations=[torch.nn.functional.relu], dropout=[0.25])
+        self._pre_encode_feedforward = FeedForward(
+            input_dim=config.hidden_size,
+            num_layers=1,
+            hidden_dims=[300],
+            activations=[torch.nn.functional.relu],
+            dropout=[0.25],
+        )
 
         # Encoder
-        self._encoder = PytorchSeq2SeqWrapper(nn.LSTM(input_size=300, hidden_size=300, num_layers=1, bidirectional=True, batch_first=True))
+        self._encoder = PytorchSeq2SeqWrapper(
+            nn.LSTM(input_size=300, hidden_size=300, num_layers=1, bidirectional=True, batch_first=True)
+        )
 
         # Integrator
-        self._integrator = PytorchSeq2SeqWrapper(nn.LSTM(input_size=1800, hidden_size=300, num_layers=1, bidirectional=True, batch_first=True))
+        self._integrator = PytorchSeq2SeqWrapper(
+            nn.LSTM(input_size=1800, hidden_size=300, num_layers=1, bidirectional=True, batch_first=True)
+        )
         self._integrator_dropout = nn.Dropout(0.1)
 
         # Output layer
 
         self._self_attentive_pooling_projection = nn.Linear(self._integrator.get_output_dim(), 1)
-        self._output_layer = Maxout(input_dim=2400, num_layers=3, output_dims=[1200, 600, config.num_labels], pool_sizes=4, dropout=[0.2, 0.3, 0.0])
+        self._output_layer = Maxout(
+            input_dim=2400,
+            num_layers=3,
+            output_dims=[1200, 600, config.num_labels],
+            pool_sizes=4,
+            dropout=[0.2, 0.3, 0.0],
+        )
 
     def forward(self, input, hidden, text_mask, **kwargs):
         text_mask = text_mask.type(torch.bool)
@@ -151,22 +183,30 @@ class BCN(nn.Module):
         encoded_text = util.weighted_sum(encoded_tokens, attention_weights)  # [bs, seq_len, 600]
 
         # Build the input to the integrator
-        integrator_input = torch.cat([encoded_tokens, encoded_tokens - encoded_text, encoded_tokens * encoded_text], dim=2)  # [bs, seq_len, 1800]
+        integrator_input = torch.cat(
+            [encoded_tokens, encoded_tokens - encoded_text, encoded_tokens * encoded_text], dim=2
+        )  # [bs, seq_len, 1800]
         integrated_encodings = self._integrator(integrator_input, text_mask)  # [bs, seq_len, 600]
 
         # Concatenate LM representations
         # integrated_encodings = torch.cat([integrated_encodings, input], dim=-1)
 
         # Simple pooling layers
-        max_masked_integrated_encodings = util.replace_masked_values(integrated_encodings, text_mask.unsqueeze(2), -1e7)  # [bs, seq_len, 600]
-        min_masked_integrated_encodings = util.replace_masked_values(integrated_encodings, text_mask.unsqueeze(2), +1e7)  # [bs, seq_len, 600]
+        max_masked_integrated_encodings = util.replace_masked_values(
+            integrated_encodings, text_mask.unsqueeze(2), -1e7
+        )  # [bs, seq_len, 600]
+        min_masked_integrated_encodings = util.replace_masked_values(
+            integrated_encodings, text_mask.unsqueeze(2), +1e7
+        )  # [bs, seq_len, 600]
 
         max_pool = torch.max(max_masked_integrated_encodings, 1)[0]  # [bs, 600]
         min_pool = torch.min(min_masked_integrated_encodings, 1)[0]  # [bs, 600]
         mean_pool = torch.sum(integrated_encodings, 1) / torch.sum(text_mask, 1, keepdim=True)  # [bs, 600]
 
         # Self-attentive pooling layer
-        self_attentive_logits = self._self_attentive_pooling_projection(integrated_encodings).squeeze(2)  # [bs, seq_len]
+        self_attentive_logits = self._self_attentive_pooling_projection(integrated_encodings).squeeze(
+            2
+        )  # [bs, seq_len]
         self_weights = util.masked_softmax(self_attentive_logits, text_mask)  # [bs, seq_len]
         self_attentive_pool = util.weighted_sum(integrated_encodings, self_weights)  # [bs, 600]
 
