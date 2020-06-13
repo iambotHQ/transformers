@@ -45,13 +45,19 @@ from .configuration_marian import MarianConfig
 from .configuration_utils import PretrainedConfig
 from .modeling_albert import (
     AlbertForMaskedLM,
+    AlbertForMultipleChoice,
     AlbertForPreTraining,
     AlbertForQuestionAnswering,
     AlbertForSequenceClassification,
     AlbertForTokenClassification,
     AlbertModel,
 )
-from .modeling_bart import BartForConditionalGeneration, BartForSequenceClassification, BartModel
+from .modeling_bart import (
+    BartForConditionalGeneration,
+    BartForQuestionAnswering,
+    BartForSequenceClassification,
+    BartModel,
+)
 from .modeling_bert import (
     BertForMaskedLM,
     BertForMultipleChoice,
@@ -273,6 +279,7 @@ MODEL_FOR_QUESTION_ANSWERING_MAPPING = OrderedDict(
     [
         (DistilBertConfig, DistilBertForQuestionAnswering),
         (AlbertConfig, AlbertForQuestionAnswering),
+        (BartConfig, BartForQuestionAnswering),
         (LongformerConfig, LongformerForQuestionAnswering),
         (XLMRobertaConfig, XLMRobertaForQuestionAnswering),
         (RobertaConfig, RobertaForQuestionAnswering),
@@ -308,6 +315,7 @@ MODEL_FOR_MULTIPLE_CHOICE_MAPPING = OrderedDict(
         (RobertaConfig, RobertaForMultipleChoice),
         (BertConfig, BertForMultipleChoice),
         (XLNetConfig, XLNetForMultipleChoice),
+        (AlbertConfig, AlbertForMultipleChoice),
     ]
 )
 
