@@ -1,6 +1,6 @@
 [tool.poetry]
 name = 'transformers'
-version = '2.9.0'
+version = '2.11.0'
 description = 'State-of-the-art Natural Language Processing for TensorFlow 2.0 and PyTorch'
 license = 'Apache'
 keywords = [
@@ -41,35 +41,168 @@ requests = '^2.23.0'
 sentencepiece = '^0.1.86'
 sacremoses = '^0.0.43'
 filelock = '^3.0.12'
-misspell = '^0.6'
 numpy = '^1.18.4'
 tokenizers = '^0.7.0'
 regex = '!=2019.12.17'
-allennlp = '^0.9.0'
-logzero = '^1.5.0'
-fire = "^0.3.1"
 
 [tool.poetry.dependencies.lm]
 git = 'https://github.com/iambotHQ/transformer-lm'
 rev = 'acd4cbf'
 
-# [tool.poetry.dependencies.torch-scatter]
-# url = 'https://pytorch-geometric.com/whl/torch-1.5.0/torch_scatter-latest%2Bcu102-cp37-cp37-linux_x86_64.whl'
+[tool.poetry.dependencies.misspell]
+optional = true
+version = '^0.6'
+
+[tool.poetry.dependencies.allennlp]
+optional = true
+version = '^0.9.0'
+
+[tool.poetry.dependencies.fire]
+optional = true
+version = '^0.3.1'
+
+[tool.poetry.dependencies.logzero]
+optional = true
+version = '^1.5.0'
+
+[tool.poetry.extras]
+testing = [
+    'pytest',
+    'pytest-xdist',
+    'timeout-decorator',
+    'psutil',
+]
+quality = [
+    'black',
+    'isort',
+    'flake8',
+    'mypy',
+    'rope',
+    'pylint',
+]
+docs = [
+    'recommonmark',
+    'sphinx',
+    'sphinx-markdown-tables',
+    'sphinx-rtd-theme',
+]
+serving = [
+    'pydantic',
+    'uvicorn',
+    'fastapi',
+    'starlette',
+]
+iambot = [
+    'misspell',
+    'allennlp',
+    'fire',
+    'logzero',
+]
 
 [tool.poetry.dev-dependencies]
-pylint = '^2.4.4'
-mypy = '^0.770'
-black = "^19.10b0"
-rope = "^0.17.0"
-ipdb = "^0.13.2"
-isort = "^4.3.21"
-flake8 = "^3.8.3"
+ipdb = '^0.13.2'
+
+[tool.poetry.dev-dependencies.pytest]
+optional = true
+version = '^5.4.3'
+
+[tool.poetry.dev-dependencies.pytest-xdist]
+optional = true
+version = '^1.32.0'
+
+[tool.poetry.dev-dependencies.timeout-decorator]
+optional = true
+version = '^0.4.1'
+
+[tool.poetry.dev-dependencies.psutil]
+optional = true
+version = '^5.7.0'
+
+[tool.poetry.dev-dependencies.black]
+optional = true
+version = '^19.10b0'
+
+[tool.poetry.dev-dependencies.isort]
+optional = true
+version = '^4.3.21'
+
+[tool.poetry.dev-dependencies.flake8]
+optional = true
+version = '^3.8.3'
+
+[tool.poetry.dev-dependencies.recommonmark]
+optional = true
+version = '^0.6.0'
+
+[tool.poetry.dev-dependencies.sphinx]
+optional = true
+version = '^3.1.1'
+
+[tool.poetry.dev-dependencies.sphinx-markdown-tables]
+optional = true
+version = '^0.0.14'
+
+[tool.poetry.dev-dependencies.sphinx-rtd-theme]
+optional = true
+version = '^0.4.3'
+
+[tool.poetry.dev-dependencies.pydantic]
+optional = true
+version = '^1.5.1'
+
+[tool.poetry.dev-dependencies.uvicorn]
+optional = true
+version = '^0.11.5'
+
+[tool.poetry.dev-dependencies.fastapi]
+optional = true
+version = '^0.57.0'
+
+[tool.poetry.dev-dependencies.starlette]
+optional = true
+version = '^0.13.4'
+
+[tool.poetry.dev-dependencies.rope]
+optional = true
+version = '^0.17.0'
+
+[tool.poetry.dev-dependencies.pylint]
+optional = true
+version = '^2.5.3'
 
 [tool.isort]
 ensure_newline_before_comments = true
 force_grid_wrap = 0
 include_trailing_comma = true
 known_first_party = 'transformers'
+known_third_party = [
+    'absl',
+    'fairseq',
+    'fastprogress',
+    'git',
+    'h5py',
+    'matplotlib',
+    'MeCab',
+    'nltk',
+    'numpy',
+    'packaging',
+    'PIL',
+    'psutil',
+    'pytorch_lightning',
+    'rouge_score',
+    'sacrebleu',
+    'seqeval',
+    'sklearn',
+    'tensorboardX',
+    'tensorflow',
+    'tensorflow_datasets',
+    'timeout_decorator',
+    'torch',
+    'torchtext',
+    'torchvision',
+    'torch_xla',
+    'tqdm',
+]
 line_length = 119
 lines_after_imports = 2
 multi_line_output = 3
@@ -79,6 +212,7 @@ use_parentheses = true
 ignore = [
     'E203',
     'E501',
+    'E741',
     'W503',
 ]
 max-line-length = 119

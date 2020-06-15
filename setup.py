@@ -72,7 +72,7 @@ iambot_deps = [
     "misspell",
     "allennlp",
     "fire",
-    "logzero",
+    "logzero"
 ]
 
 extras["mecab"] = ["mecab-python3"]
