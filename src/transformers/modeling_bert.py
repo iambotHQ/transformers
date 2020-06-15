@@ -541,7 +541,7 @@ class BertPreTrainedModel(PreTrainedModel):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
-        from transformers.customs.utils import ConcatAvgMaxPooler
+        from transformers.customs.common.concat_avg_max_pooler import ConcatAvgMaxPooler
         model = super().from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
         pooler_name = kwargs.get("pooler", None)
         if pooler_name:
